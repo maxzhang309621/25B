@@ -31,16 +31,16 @@ def _local_fft_amplitude(
     return float(np.max(spectrum[mask])) if np.any(mask) else 0.0
 
 
-def diagnose_multibeam(
+def harmonic_spectrum(
     processed: ProcessedSpectrum,
-    two: TwoBeamResult,
-    multi: MultiBeamResult,
-) -> MultiBeamDiagnostic:
+    thickness_um: float,
+) -> tuple[np.ndarray, np.ndarray, float, float]:
+    """返回归一化幅频谱、基频及二次谐波比，供诊断与绘图共用。"""
     spec = processed.source.spec
     ncos = spec.refractive_index * float(
         refracted_cosine(spec.refractive_index, spec.angle_deg)
     )
-    fundamental = 2.0 * ncos * two.thickness_refined_um * 1e-4
+    fundamental = 2.0 * ncos * thickness_um * 1e-4
     tapered = (processed.residual_pct - processed.residual_pct.mean()) * np.hanning(
         len(processed.residual_pct)
     )
@@ -48,7 +48,19 @@ def diagnose_multibeam(
     frequency = np.fft.rfftfreq(len(tapered), processed.spacing_cm1)
     first = _local_fft_amplitude(frequency, amplitude, fundamental)
     second = _local_fft_amplitude(frequency, amplitude, 2.0 * fundamental)
-    harmonic_ratio = float(second / first) if first > 0 else 0.0
+    ratio = float(second / first) if first > 0 else 0.0
+    normalized = amplitude / first if first > 0 else amplitude
+    return frequency, normalized, fundamental, ratio
+
+
+def diagnose_multibeam(
+    processed: ProcessedSpectrum,
+    two: TwoBeamResult,
+    multi: MultiBeamResult,
+) -> MultiBeamDiagnostic:
+    _, _, _, harmonic_ratio = harmonic_spectrum(
+        processed, two.thickness_refined_um
+    )
 
     delta_aicc = float(two.aicc - multi.aicc)
     improvement = float(100.0 * (two.rmse_pct - multi.rmse_pct) / two.rmse_pct)

@@ -165,3 +165,48 @@ g(\tilde\nu,\theta_0)=\tilde\nu\sqrt{n^2(\tilde\nu)-\sin^2\theta_0}.
 | T5 | 实现多光束诊断、AICc/BIC 和可靠性分析 | 5、7 | 模型比较与 Bootstrap |
 | T6 | 实现绘图、结果导出和 `model.md` | 8 | Matplotlib |
 | T7 | 编写合成数据、公式、边界和端到端测试并运行冒烟测试 | 全部 | 架构验收标准 |
+
+## v2 可视化增强算法方案
+
+### 步骤 V1：单附件六区诊断图
+
+- 选定算法：Matplotlib `subplot_mosaic` 语义布局。
+- 选型理由：允许原始谱、预处理、拟合、残差、频谱和证据卡采用不同面积，同时用命名轴减少布局与绘图逻辑耦合。
+- 参考资料：https://matplotlib.org/stable/users/explain/axes/mosaic.html
+- 具体实现：
+  - 全谱区读取原始数据并用阴影标识实际拟合波段；
+  - 预处理区叠加测量、平滑与基线；
+  - 拟合区标记峰、谷，并叠加双光束与 Airy 曲线；
+  - 残差区标注两个 RMSE 及改善率；
+  - 频谱区复用 `diagnostics.py` 的同一基频定义，标注 \(f_1\)、\(2f_1\) 和谐波比；
+  - 证据区直接消费 `MultiBeamDiagnostic`，不重复实现判断逻辑。
+- 接口：`ProcessedSpectrum + TwoBeamResult + MultiBeamResult + MultiBeamDiagnostic + UncertaintyResult → PNG`。
+- 依赖：现有 Matplotlib/NumPy，不增加第三方库。
+
+### 步骤 V2：论文级汇总图
+
+- 选定算法：
+  - `errorbar` 绘制最终厚度与非对称 95% 置信区间；
+  - 分组散点/连线绘制双角度一致性；
+  - 归一化阈值证据矩阵绘制多光束四指标；
+  - 分组柱状图比较双/多光束 RMSE。
+- 参考资料：
+  - 误差棒：https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.errorbar.html
+  - 图像矩阵：https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
+- 接口：`thickness_summary.csv` 等价内存表 + `consistency` → 4 张 PNG。
+
+### 步骤 V3：统一样式
+
+- 选定算法：Matplotlib 内置 `tableau-colorblind10` 样式并叠加项目级 `rcParams`。
+- 选型理由：不新增依赖；颜色盲友好，同时通过线型、标记和文字避免只依赖颜色。
+- 参考资料：https://matplotlib.org/stable/users/explain/customizing.html
+- 导出参数：PNG，220 dpi，`bbox_inches="tight"`；统一字号、网格、单位和面板编号。
+
+### v2 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| V1 | 重构 `plot_spectrum_fit` 为六区证据图 | V1、V3 | subplot mosaic / rcParams |
+| V2 | 实现厚度、角度一致性、证据矩阵和 RMSE 汇总图 | V2、V3 | errorbar / imshow |
+| V3 | 更新 `main.py` 传递诊断与不确定度并触发汇总输出 | V1、V2 | 项目接口约定 |
+| V4 | 新增可视化输出测试并完整运行，确认数值不变 | 全部 | v2 验收标准 |

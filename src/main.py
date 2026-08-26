@@ -11,7 +11,7 @@ from config import BOOTSTRAP_BLOCK_CM1, DATASETS, DATA_DIR, OUTPUT_DIR
 from data_io import load_spectrum
 from diagnostics import diagnose_multibeam
 from multi_beam import fit_multi_beam
-from plotting import plot_spectrum_fit
+from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
@@ -83,7 +83,14 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             "diagnostic": _plain_dict(diagnostic),
             "uncertainty": _plain_dict(uncertainty),
         }
-        plot_spectrum_fit(processed, two, multi, OUTPUT_DIR / f"{spec.key}_fit.png")
+        plot_spectrum_fit(
+            processed,
+            two,
+            multi,
+            diagnostic,
+            uncertainty,
+            OUTPUT_DIR / f"{spec.key}_fit.png",
+        )
 
     summary = pd.DataFrame(rows)
     summary.to_csv(OUTPUT_DIR / "thickness_summary.csv", index=False, encoding="utf-8-sig")
@@ -106,6 +113,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         }
     with (OUTPUT_DIR / "consistency.json").open("w", encoding="utf-8") as handle:
         json.dump(consistency, handle, ensure_ascii=False, indent=2)
+    plot_summary_figures(summary, consistency, OUTPUT_DIR)
 
     print(summary.to_string(index=False, float_format=lambda value: f"{value:.6g}"))
     print("\n双角度一致性：")
