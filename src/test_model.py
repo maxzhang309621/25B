@@ -1,11 +1,27 @@
 """核心公式、合成数据与附件读取测试。"""
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+_src = Path(__file__).resolve().parent
+if str(_src) not in sys.path:
+    sys.path.insert(0, str(_src))
+
+import importlib.util
+
+_band_path = _src / "Candidate window" / "band_select.py"
+_band_spec = importlib.util.spec_from_file_location("band_select", _band_path)
+_band_select = importlib.util.module_from_spec(_band_spec)
+sys.modules["band_select"] = _band_select
+assert _band_spec.loader is not None
+_band_spec.loader.exec_module(_band_select)
+select_band = _band_select.select_band
+score_band = _band_select.score_band
 
 from config import DATASETS, DATA_DIR
 from data_io import Spectrum, load_spectrum
@@ -47,6 +63,22 @@ class OpticsTests(unittest.TestCase):
             refracted_cosine(-1.0, 10.0)
         with self.assertRaises(ValueError):
             round_trip_phase(np.array([1000.0]), -2.0, 2.55, 10.0)
+
+
+class BandSelectTests(unittest.TestCase):
+    def test_select_band_prefers_low_spacing_mad(self):
+        spec = DATASETS[0]
+        x = np.arange(1100.0, 4000.0, 0.5)
+        true_um = 8.0
+        phase = round_trip_phase(x, true_um, spec.refractive_index, spec.angle_deg)
+        rng = np.random.default_rng(11)
+        residual = np.cos(phase + 0.2) + rng.normal(0, 0.02, len(x))
+        source = Spectrum(x, 20 + residual, spec, {})
+        selected, scores = select_band(source)
+        selected_rows = [row for row in scores if row.selected]
+        self.assertEqual(len(selected_rows), 1)
+        self.assertEqual(selected, (selected_rows[0].lo, selected_rows[0].hi))
+        self.assertGreaterEqual(selected_rows[0].extrema_count, 15)
 
 
 class InversionTests(unittest.TestCase):

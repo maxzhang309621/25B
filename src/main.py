@@ -1,8 +1,11 @@
 """2025 B 题端到端求解入口。"""
 
 import argparse
+import importlib.util
 import json
+import sys
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,6 +18,15 @@ from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
+
+_BAND_SELECT_PATH = Path(__file__).resolve().parent / "Candidate window" / "band_select.py"
+_band_spec = importlib.util.spec_from_file_location("band_select", _BAND_SELECT_PATH)
+_band_select = importlib.util.module_from_spec(_band_spec)
+sys.modules["band_select"] = _band_select
+assert _band_spec.loader is not None
+_band_spec.loader.exec_module(_band_select)
+select_band = _band_select.select_band
+build_sensitivity_rows = _band_select.build_sensitivity_rows
 
 
 def _plain_dict(obj) -> dict:
@@ -33,10 +45,13 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     rows = []
     audits = {}
     details = {}
+    sensitivity_rows = []
 
     for index, spec in enumerate(DATASETS):
         spectrum = load_spectrum(DATA_DIR, spec)
-        processed = preprocess(spectrum)
+        selected_band, band_scores = select_band(spectrum)
+        sensitivity_rows.extend(build_sensitivity_rows(spec.key, spec.material, band_scores))
+        processed = preprocess(spectrum, fit_band_cm1=selected_band)
         two = estimate_two_beam(processed)
         multi = fit_multi_beam(processed, two, global_search=global_search)
         diagnostic = diagnose_multibeam(processed, two, multi)
@@ -74,10 +89,14 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
                 "bootstrap_ci95_low_um": uncertainty.ci95_low_um,
                 "bootstrap_ci95_high_um": uncertainty.ci95_high_um,
                 "effective_extrema_count": len(two.peak_indices) + len(two.valley_indices),
+                "fit_band_lo_cm1": selected_band[0],
+                "fit_band_hi_cm1": selected_band[1],
             }
         )
         audits[spec.key] = spectrum.audit
         details[spec.key] = {
+            "selected_band_cm1": list(selected_band),
+            "band_scores": [asdict(score) for score in band_scores],
             "two_beam": _plain_dict(two),
             "multi_beam": _plain_dict(multi),
             "diagnostic": _plain_dict(diagnostic),
@@ -94,6 +113,11 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
 
     summary = pd.DataFrame(rows)
     summary.to_csv(OUTPUT_DIR / "thickness_summary.csv", index=False, encoding="utf-8-sig")
+    pd.DataFrame(sensitivity_rows).to_csv(
+        OUTPUT_DIR / "band_sensitivity.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     with (OUTPUT_DIR / "data_audit.json").open("w", encoding="utf-8") as handle:
         json.dump(audits, handle, ensure_ascii=False, indent=2)
     with (OUTPUT_DIR / "fit_details.json").open("w", encoding="utf-8") as handle:

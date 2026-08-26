@@ -5,8 +5,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
-OUTPUT_DIR = ROOT / "output"
+CANDIDATE_WINDOW_DIR = SRC_DIR / "Candidate window"
+OUTPUT_DIR = CANDIDATE_WINDOW_DIR / "output"
 
 
 @dataclass(frozen=True)

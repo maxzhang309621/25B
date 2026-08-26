@@ -61,28 +61,28 @@
       "aicc": -11981.384424668167
     },
     "multi_beam": {
-      "thickness_um": 8.49759749807955,
-      "effective_reflectivity": 0.010926157048141925,
-      "phase_offset_rad": -3.141592653589793,
-      "rmse_pct": 0.2750391942920987,
-      "r2": 0.7127265625038954,
-      "aicc": -14977.81580422342,
+      "thickness_um": 8.449111366563422,
+      "effective_reflectivity": 0.004931276619237556,
+      "phase_offset_rad": -2.8579870910189076,
+      "rmse_pct": 0.2732303608614217,
+      "r2": 0.7164927245600583,
+      "aicc": -15054.449159064137,
       "optimization_success": true
     },
     "diagnostic": {
       "harmonic_ratio": 0.01855835213880671,
-      "delta_aicc": 2996.4313795552534,
-      "rmse_improvement_pct": 22.740605707332843,
+      "delta_aicc": 3073.06473439597,
+      "rmse_improvement_pct": 23.248712835810014,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
       "observable_multibeam": false
     },
     "uncertainty": {
-      "mean_um": 7.8826002164786875,
-      "std_um": 0.14649046065514845,
-      "ci95_low_um": 7.677290087027449,
-      "ci95_high_um": 8.15218541700371
+      "mean_um": 7.882600216478686,
+      "std_um": 0.12318646285922305,
+      "ci95_low_um": 7.6454036580114035,
+      "ci95_high_um": 8.135655087209146
     }
   },
   "sic_15": {
@@ -147,18 +147,18 @@
       "aicc": -11938.532634699266
     },
     "multi_beam": {
-      "thickness_um": 8.41475645775549,
-      "effective_reflectivity": 0.017102129337076923,
-      "phase_offset_rad": -3.141592653589793,
-      "rmse_pct": 0.2776363327693733,
-      "r2": 0.7055589270698368,
-      "aicc": -14868.661746090276,
+      "thickness_um": 8.333315407713537,
+      "effective_reflectivity": 0.004838131248504978,
+      "phase_offset_rad": 0.5923781845872291,
+      "rmse_pct": 0.2648006511865637,
+      "r2": 0.7321547859899755,
+      "aicc": -15418.408329065,
       "optimization_success": true
     },
     "diagnostic": {
       "harmonic_ratio": 0.0366382671591428,
-      "delta_aicc": 2930.12911139101,
-      "rmse_improvement_pct": 22.298284148173906,
+      "delta_aicc": 3479.8756943657336,
+      "rmse_improvement_pct": 25.890589496553748,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
@@ -166,9 +166,9 @@
     },
     "uncertainty": {
       "mean_um": 7.791441164588415,
-      "std_um": 0.1321081831259644,
-      "ci95_low_um": 7.5604977219354605,
-      "ci95_high_um": 8.051028036134431
+      "std_um": 0.17110711966603653,
+      "ci95_low_um": 7.457869438786754,
+      "ci95_high_um": 8.101841867476562
     }
   },
   "si_10": {
@@ -233,28 +233,28 @@
       "aicc": -3965.980483369969
     },
     "multi_beam": {
-      "thickness_um": 3.597949728783968,
-      "effective_reflectivity": 0.4097612707606088,
-      "phase_offset_rad": -1.365033526353832,
-      "rmse_pct": 0.6251700895567345,
-      "r2": 0.6675151848718088,
-      "aicc": -5441.442594205991,
+      "thickness_um": 3.5979496816594745,
+      "effective_reflectivity": 0.4097612629643482,
+      "phase_offset_rad": -1.365033188237057,
+      "rmse_pct": 0.6251700895567502,
+      "r2": 0.667515184871792,
+      "aicc": -5441.442594205697,
       "optimization_success": true
     },
     "diagnostic": {
       "harmonic_ratio": 0.19620477977314368,
-      "delta_aicc": 1475.4621108360216,
-      "rmse_improvement_pct": 11.930303859867118,
+      "delta_aicc": 1475.4621108357278,
+      "rmse_improvement_pct": 11.930303859864896,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
       "observable_multibeam": true
     },
     "uncertainty": {
-      "mean_um": 3.4025463670816682,
-      "std_um": 0.042334298769858045,
-      "ci95_low_um": 3.326060309246382,
-      "ci95_high_um": 3.4761620179941817
+      "mean_um": 3.402546367081668,
+      "std_um": 0.04425421477863307,
+      "ci95_low_um": 3.3269757926661705,
+      "ci95_high_um": 3.498591109341559
     }
   },
   "si_15": {
@@ -319,18 +319,18 @@
       "aicc": -2793.5299332124564
     },
     "multi_beam": {
-      "thickness_um": 3.5843233421601317,
-      "effective_reflectivity": 0.421997765725107,
-      "phase_offset_rad": -1.4710067793878074,
-      "rmse_pct": 0.717301942806973,
-      "r2": 0.6078312571699972,
-      "aicc": -3844.8298293290513,
+      "thickness_um": 3.584323271751755,
+      "effective_reflectivity": 0.42199776067669387,
+      "phase_offset_rad": -1.471006366832763,
+      "rmse_pct": 0.7173019428069832,
+      "r2": 0.6078312571699862,
+      "aicc": -3844.8298293288867,
       "optimization_success": true
     },
     "diagnostic": {
       "harmonic_ratio": 0.22160394733961017,
-      "delta_aicc": 1051.299896116595,
-      "rmse_improvement_pct": 8.654398386139436,
+      "delta_aicc": 1051.2998961164303,
+      "rmse_improvement_pct": 8.654398386138134,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
@@ -338,9 +338,9 @@
     },
     "uncertainty": {
       "mean_um": 3.410467690554108,
-      "std_um": 0.07012735467823021,
-      "ci95_low_um": 3.2900861017008296,
-      "ci95_high_um": 3.538195596488527
+      "std_um": 0.06223492051462157,
+      "ci95_low_um": 3.2865350722153144,
+      "ci95_high_um": 3.496768603062943
     }
   }
 }

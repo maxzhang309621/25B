@@ -1,5 +1,7 @@
 """斜入射薄膜干涉的物理公式。"""
 
+from __future__ import annotations
+
 import numpy as np
 
 

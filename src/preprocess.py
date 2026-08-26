@@ -1,5 +1,7 @@
 """光谱平滑、基线分离和分析波段截取。"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -32,8 +34,9 @@ def preprocess(
     spectrum: Spectrum,
     noise_window_cm1: float = NOISE_WINDOW_CM1,
     baseline_window_cm1: float = BASELINE_WINDOW_CM1,
+    fit_band_cm1: tuple[float, float] | None = None,
 ) -> ProcessedSpectrum:
-    lo, hi = spectrum.spec.fit_band_cm1
+    lo, hi = fit_band_cm1 if fit_band_cm1 is not None else spectrum.spec.fit_band_cm1
     mask = (spectrum.wavenumber_cm1 >= lo) & (spectrum.wavenumber_cm1 <= hi)
     x = spectrum.wavenumber_cm1[mask]
     y = spectrum.reflectance_pct[mask]

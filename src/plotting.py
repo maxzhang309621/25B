@@ -298,6 +298,7 @@ def plot_thickness_comparison(summary: pd.DataFrame, path: Path) -> None:
         low = subset["bootstrap_ci95_low_um"].to_numpy(float)
         high = subset["bootstrap_ci95_high_um"].to_numpy(float)
         yerr = np.vstack([selected - low, high - selected])
+        yerr = np.clip(yerr, 0.0, None)
         ax.scatter(
             x - 0.13,
             subset["two_beam_thickness_um"],
