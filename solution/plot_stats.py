@@ -35,10 +35,10 @@ def detrend(y):
 
 
 datasets = {
-    "SiC 10° (附件1)": load_xlsx("附件1.xlsx"),
-    "SiC 15° (附件2)": load_xlsx("附件2.xlsx"),
-    "Si 10° (附件3)": load_xlsx("附件3.xlsx"),
-    "Si 15° (附件4)": load_xlsx("附件4.xlsx"),
+    "SiC 10° (附件1)": load("附件1.xlsx"),
+    "SiC 15° (附件2)": load("附件2.xlsx"),
+    "Si 10° (附件3)": load("附件3.xlsx"),
+    "Si 15° (附件4)": load("附件4.xlsx"),
 }
 
 # 图1: 四条光谱总览
