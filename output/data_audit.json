@@ -1,0 +1,54 @@
+{
+  "sic_10": {
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件1.xlsx",
+    "rows_in_file": 7469,
+    "valid_points": 7468,
+    "nonfinite_rows": 0,
+    "duplicate_wavenumbers": 0,
+    "removed_first_zero": true,
+    "wavenumber_min_cm1": 400.1569,
+    "wavenumber_max_cm1": 4000.122,
+    "median_spacing_cm1": 0.4819999999999709,
+    "reflectance_min_pct": 0.636093383,
+    "reflectance_max_pct": 95.38499492
+  },
+  "sic_15": {
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件2.xlsx",
+    "rows_in_file": 7469,
+    "valid_points": 7468,
+    "nonfinite_rows": 0,
+    "duplicate_wavenumbers": 0,
+    "removed_first_zero": true,
+    "wavenumber_min_cm1": 400.1569,
+    "wavenumber_max_cm1": 4000.122,
+    "median_spacing_cm1": 0.4819999999999709,
+    "reflectance_min_pct": 0.976744442,
+    "reflectance_max_pct": 102.7393552
+  },
+  "si_10": {
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件3.xlsx",
+    "rows_in_file": 7469,
+    "valid_points": 7468,
+    "nonfinite_rows": 0,
+    "duplicate_wavenumbers": 0,
+    "removed_first_zero": true,
+    "wavenumber_min_cm1": 400.1569,
+    "wavenumber_max_cm1": 4000.122,
+    "median_spacing_cm1": 0.4819999999999709,
+    "reflectance_min_pct": 0.134384598,
+    "reflectance_max_pct": 79.8019744
+  },
+  "si_15": {
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件4.xlsx",
+    "rows_in_file": 7469,
+    "valid_points": 7468,
+    "nonfinite_rows": 0,
+    "duplicate_wavenumbers": 0,
+    "removed_first_zero": true,
+    "wavenumber_min_cm1": 400.1569,
+    "wavenumber_max_cm1": 4000.122,
+    "median_spacing_cm1": 0.4819999999999709,
+    "reflectance_min_pct": 0.349331123,
+    "reflectance_max_pct": 91.48944351
+  }
+}
