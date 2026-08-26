@@ -65,23 +65,39 @@ python -c "from pathlib import Path; print('use fix_paths or edit ATTACH in scri
 
 ## Git 工作流（本地可直接提交）
 
+本地仓库路径：
+
+`E:\课程\数模\模拟测试\第三次模拟\CUMCM2025B`
+
+当前分支：**Peterzhu**（已有初始提交）。改完代码后：
+
 ```bash
 cd E:\课程\数模\模拟测试\第三次模拟\CUMCM2025B
-git status
 git add -A
 git commit -m "说明本次改动"
+```
+
+### 推送到 GitHub
+
+目标上游：`https://github.com/maxzhang309621/25B` 的 `Peterzhu` 分支。
+
+当前账号 **没有该仓库写权限**（push 会 403）。任选其一：
+
+1. **请仓库主人**把你的 GitHub 账号加成 Collaborator，然后：
+
+```bash
 git push -u origin Peterzhu
 ```
 
-首次推送前需：
-
-1. `gh auth login` 或配置 GitHub 凭据  
-2. 对 `maxzhang309621/25B` 有写权限；若无写权限，请 Fork 后改 `origin`：
+2. **先 Fork** [maxzhang309621/25B](https://github.com/maxzhang309621/25B) 到自己账号，再：
 
 ```bash
 git remote set-url origin https://github.com/<你的用户名>/25B.git
 git push -u origin Peterzhu
+# 可选：在 GitHub 上向原仓库开 PR，目标分支选新建 Peterzhu
 ```
+
+本地 `origin` 已指向 `https://github.com/maxzhang309621/25B.git`。
 
 ## Skill（给其他 AI）
 
