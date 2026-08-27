@@ -22,6 +22,25 @@ from data_io import load_spectrum  # noqa: E402
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _apply_plot_style() -> None:
+    try:
+        plt.style.use("tableau-colorblind10")
+    except OSError:
+        plt.style.use("default")
+    plt.rcParams.update(
+        {
+            "font.sans-serif": ["Microsoft YaHei", "SimHei", "DejaVu Sans"],
+            "axes.unicode_minus": False,
+            "axes.titlesize": 11,
+            "axes.labelsize": 9,
+            "legend.fontsize": 8,
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+        }
+    )
+
+
 # 物理分段（用于说明，非程序自动检测 Reststrahlen 的阈值）
 SIC_SPECTRAL_REGIONS = (
     ("400-797", 400.0, 797.0, "普通反射区"),
@@ -154,24 +173,65 @@ def fringe_segment_table(dataset_key: str) -> pd.DataFrame:
 
 
 def plot_sic_regions(dataset_key: str = "sic_10") -> Path:
+    _apply_plot_style()
     spec = next(item for item in DATASETS if item.key == dataset_key)
     spectrum = load_spectrum(DATA_DIR, spec)
     nu, R = spectrum.wavenumber_cm1, spectrum.reflectance_pct
 
-    fig, ax = plt.subplots(figsize=(11, 4.2), dpi=150)
-    for label, lo, hi, role in SIC_SPECTRAL_REGIONS:
+    fig, ax = plt.subplots(figsize=(11, 4.5), dpi=150)
+    # 图例只保留分段色块，避免与参考线条目挤在一起
+    legend_labels = {
+        "797-1000": "797–1000 Reststrahlen",
+        "1000-1100": "1000–1100 吸收谷底",
+        "1100-1200": "1100–1200 过渡区",
+        "1200-4000": "1200–4000 干涉主区",
+        "400-797": "400–797",
+    }
+    for label, lo, hi, _role in SIC_SPECTRAL_REGIONS:
         if label == "1100-4000":
             continue
-        ax.axvspan(lo, hi, color=REGION_COLORS.get(label, "#EDF2F7"), alpha=0.55, label=role)
-    ax.plot(nu, R, color="#2B6CB0", lw=0.7, alpha=0.9)
-    ax.axvline(1200, color="#2F855A", ls="--", lw=1.2, label="当前主窗下限 1200")
-    ax.axvline(1100, color="#C05621", ls=":", lw=1.2, label="原 dev 下限 1100")
+        ax.axvspan(
+            lo,
+            hi,
+            color=REGION_COLORS.get(label, "#EDF2F7"),
+            alpha=0.55,
+            label=legend_labels.get(label, label),
+        )
+    ax.plot(nu, R, color="#2B6CB0", lw=0.75, alpha=0.92, label="实测反射率")
+
+    y_top = float(np.max(R))
+    y_annot = y_top * 0.92
+    ax.axvline(1200, color="#2F855A", ls="--", lw=1.3)
+    ax.axvline(1100, color="#C05621", ls=":", lw=1.3)
+    ax.text(
+        1205,
+        y_annot,
+        "主窗下限 1200",
+        color="#2F855A",
+        fontsize=8,
+        rotation=90,
+        va="top",
+        ha="left",
+    )
+    ax.text(
+        1105,
+        y_annot * 0.82,
+        "原 dev 1100",
+        color="#C05621",
+        fontsize=8,
+        rotation=90,
+        va="top",
+        ha="left",
+    )
+
     ax.set_xlim(nu.min(), nu.max())
     ax.set_xlabel(r"波数 $\tilde{\nu}$ (cm$^{-1}$)")
     ax.set_ylabel("反射率 R (%)")
-    ax.set_title(f"SiC 全谱分段示意（{spec.filename}，{spec.angle_deg:.0f}°）")
+    ax.set_title(
+        f"SiC 全谱分段示意 — {spec.filename}，入射角 {spec.angle_deg:.0f}°"
+    )
     ax.grid(True, alpha=0.25)
-    ax.legend(loc="upper right", fontsize=7, framealpha=0.92, ncol=2)
+    ax.legend(loc="upper left", fontsize=7.5, framealpha=0.92, ncol=1)
     fig.tight_layout()
     path = OUTPUT_DIR / f"{dataset_key}_spectrum_regions.png"
     fig.savefig(path, bbox_inches="tight", facecolor="white")

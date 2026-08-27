@@ -75,5 +75,8 @@ Desktop.ini
 # Local experiment outputs (regenerate with scripts)
 src/Candidate window/output/
 
+# Local-only files (paper drafts, templates; do not upload)
+本地文件：无需上传/
+
 # Optional: large regenerated figures (keep CSV/JSON in output/)
 # output/*.png
