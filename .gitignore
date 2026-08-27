@@ -1,6 +1,9 @@
-# Python
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
+*.pyd
 *$py.class
 *.so
 .Python
@@ -72,8 +75,5 @@ Desktop.ini
 *.temp
 .cache/
 
-# Local experiment outputs (regenerate with scripts)
-src/Candidate window/output/
-
-# Optional: large regenerated figures (keep CSV/JSON in output/)
-# output/*.png
+# Program run outputs (regenerate with: cd src && python main.py)
+output/
