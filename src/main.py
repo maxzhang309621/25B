@@ -13,6 +13,8 @@ import pandas as pd
 from config import BOOTSTRAP_BLOCK_CM1, DATASETS, DATA_DIR, OUTPUT_DIR
 from data_io import load_spectrum
 from diagnostics import diagnose_multibeam
+from dispersion import METADATA
+from joint_calibration import fit_joint_calibration, refractive_index_rows
 from multi_beam import fit_multi_beam
 from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
@@ -46,6 +48,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     audits = {}
     details = {}
     sensitivity_rows = []
+    material_inputs = {"SiC": [], "Si": []}
 
     for index, spec in enumerate(DATASETS):
         spectrum = load_spectrum(DATA_DIR, spec)
@@ -64,6 +67,12 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         )
         selected = multi.thickness_um if diagnostic.observable_multibeam else two.thickness_refined_um
         selected_model = "multi-beam" if diagnostic.observable_multibeam else "two-beam"
+        calibration_spectrum = preprocess(
+            spectrum, fit_band_cm1=METADATA[spec.material].valid_wavenumber_cm1
+        )
+        material_inputs[spec.material].append(
+            (spec.key, calibration_spectrum, selected)
+        )
 
         rows.append(
             {
@@ -112,6 +121,60 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         )
 
     summary = pd.DataFrame(rows)
+    joint_results = {}
+    refractive_rows = []
+    for material, items in material_inputs.items():
+        joint = fit_joint_calibration(
+            [item[1] for item in items],
+            [item[2] for item in items],
+            material,
+        )
+        material_mask = summary["material"] == material
+        conditional_std = summary.loc[
+            material_mask, "bootstrap_std_um"
+        ].to_numpy(float)
+        joint.statistical_std_um = float(
+            1.0 / np.sqrt(np.sum(1.0 / np.maximum(conditional_std, 1e-4) ** 2))
+        )
+        joint.statistical_ci95_low_um = float(
+            joint.adopted_thickness_um - 1.96 * joint.statistical_std_um
+        )
+        joint.statistical_ci95_high_um = float(
+            joint.adopted_thickness_um + 1.96 * joint.statistical_std_um
+        )
+        joint_results[material] = joint
+        summary.loc[material_mask, "dispersion_fitted_thickness_um"] = (
+            joint.fitted_thickness_um
+        )
+        summary.loc[material_mask, "dispersion_adopted_thickness_um"] = (
+            joint.adopted_thickness_um
+        )
+        summary.loc[material_mask, "dispersion_systematic_low_um"] = (
+            joint.systematic_low_um
+        )
+        summary.loc[material_mask, "dispersion_systematic_high_um"] = (
+            joint.systematic_high_um
+        )
+        summary.loc[material_mask, "dispersion_stat_ci95_low_um"] = (
+            joint.statistical_ci95_low_um
+        )
+        summary.loc[material_mask, "dispersion_stat_ci95_high_um"] = (
+            joint.statistical_ci95_high_um
+        )
+        summary.loc[material_mask, "epi_carrier_cm3"] = joint.epi_carrier_cm3
+        summary.loc[material_mask, "substrate_carrier_cm3"] = (
+            joint.substrate_carrier_cm3
+        )
+        summary.loc[material_mask, "carrier_concentration_identifiable"] = (
+            joint.concentration_identifiable
+        )
+        for key, _, _ in items:
+            details[key]["dispersion_joint_calibration"] = joint.to_dict()
+        lo, hi = METADATA[material].valid_wavenumber_cm1
+        refractive_rows.extend(
+            refractive_index_rows(material, joint, np.linspace(lo, hi, 300))
+        )
+
     summary.to_csv(OUTPUT_DIR / "thickness_summary.csv", index=False, encoding="utf-8-sig")
     pd.DataFrame(sensitivity_rows).to_csv(
         OUTPUT_DIR / "band_sensitivity.csv",
@@ -122,6 +185,18 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         json.dump(audits, handle, ensure_ascii=False, indent=2)
     with (OUTPUT_DIR / "fit_details.json").open("w", encoding="utf-8") as handle:
         json.dump(details, handle, ensure_ascii=False, indent=2)
+    with (OUTPUT_DIR / "dispersion_fit.json").open("w", encoding="utf-8") as handle:
+        json.dump(
+            {material: result.to_dict() for material, result in joint_results.items()},
+            handle,
+            ensure_ascii=False,
+            indent=2,
+        )
+    pd.DataFrame(refractive_rows).to_csv(
+        OUTPUT_DIR / "refractive_index_curves.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     consistency = {}
     for material in ("SiC", "Si"):
@@ -134,6 +209,16 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             "angle_relative_difference_pct": relative,
             "weighted_combined_thickness_um": combined,
             "selected_models": subset["selected_model"].tolist(),
+            "dispersion_adopted_thickness_um": joint_results[
+                material
+            ].adopted_thickness_um,
+            "dispersion_systematic_interval_um": [
+                joint_results[material].systematic_low_um,
+                joint_results[material].systematic_high_um,
+            ],
+            "carrier_concentration_identifiable": joint_results[
+                material
+            ].concentration_identifiable,
         }
     with (OUTPUT_DIR / "consistency.json").open("w", encoding="utf-8") as handle:
         json.dump(consistency, handle, ensure_ascii=False, indent=2)
