@@ -20,6 +20,10 @@ from model_flowchart import plot_model_flowchart
 from multi_beam import fit_multi_beam
 from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
+from raw_evidence_plotting import (
+    plot_raw_dispersion_evidence,
+    plot_raw_multibeam_evidence,
+)
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
 
@@ -51,6 +55,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     details = {}
     sensitivity_rows = []
     material_inputs = {"SiC": [], "Si": []}
+    multibeam_plot_inputs = []
 
     for index, spec in enumerate(DATASETS):
         spectrum = load_spectrum(DATA_DIR, spec)
@@ -75,6 +80,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         material_inputs[spec.material].append(
             (spec.key, calibration_spectrum, selected)
         )
+        multibeam_plot_inputs.append((spec.key, processed, two))
 
         rows.append(
             {
@@ -285,6 +291,17 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         refractive_curves=refractive_frame,
         carrier_result=carrier_payload,
         carrier_profile=carrier_profile_frame,
+    )
+    plot_raw_multibeam_evidence(
+        summary,
+        multibeam_plot_inputs,
+        OUTPUT_DIR / "raw_evidence" / "multibeam",
+    )
+    plot_raw_dispersion_evidence(
+        refractive_frame,
+        dispersion_payload,
+        carrier_profile_frame,
+        OUTPUT_DIR / "raw_evidence" / "dispersion",
     )
     plot_model_flowchart(OUTPUT_DIR / "model_flowchart.png")
 

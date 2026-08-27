@@ -56,77 +56,77 @@
       "thickness_valleys_um": 7.925785674961702,
       "thickness_refined_um": 7.882600216478686,
       "fringe_spacing_cm1": 249.3346666666667,
-      "rmse_pct": 0.3559944998295777,
-      "r2": 0.5187254759723308,
-      "aicc": -11981.3844250295
+      "rmse_pct": 0.3559944998310532,
+      "r2": 0.5187254759704835,
+      "aicc": -11981.384424981366
     },
     "multi_beam": {
-      "thickness_um": 8.448785928158149,
+      "thickness_um": 8.448785987311847,
       "effective_reflectivity": 0.002,
-      "phase_offset_rad": 0.2858493523773449,
-      "rmse_pct": 0.27324597057771527,
-      "r2": 0.7164603299474632,
-      "aicc": -15053.785667400722,
+      "phase_offset_rad": 0.28584901086677483,
+      "rmse_pct": 0.27324597058051237,
+      "r2": 0.7164603299429202,
+      "aicc": -15053.785667281833,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.01855835213703244,
-      "delta_aicc": 3072.401242371221,
-      "rmse_improvement_pct": 23.24432801390919,
+      "harmonic_ratio": 0.018558352137268454,
+      "delta_aicc": 3072.401242300466,
+      "rmse_improvement_pct": 23.244328013441606,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
       "observable_multibeam": false
     },
     "uncertainty": {
-      "mean_um": 7.882600216478686,
-      "std_um": 0.12318646285922305,
-      "ci95_low_um": 7.6454036580114035,
-      "ci95_high_um": 8.135655087209146
+      "mean_um": 7.8826002164786875,
+      "std_um": 0.14649046065514845,
+      "ci95_low_um": 7.677290087027449,
+      "ci95_high_um": 8.15218541700371
     },
     "dispersion_joint_calibration": {
       "material": "SiC",
-      "fitted_thickness_um": 7.722230230589576,
+      "fitted_thickness_um": 7.7222302282671045,
       "adopted_thickness_um": 7.83702069053355,
-      "epi_carrier_cm3": 1.0891454752823976e+17,
-      "substrate_carrier_cm3": 3.455946134259544e+18,
-      "rmse_pct": 1.5202777120981645,
-      "jacobian_condition": 9.89225412678353,
-      "max_parameter_correlation": 0.3788668790706501,
+      "epi_carrier_cm3": 1.0891454759137104e+17,
+      "substrate_carrier_cm3": 3.455946134475224e+18,
+      "rmse_pct": 1.5202777106690906,
+      "jacobian_condition": 9.892254121159558,
+      "max_parameter_correlation": 0.3788668787641031,
       "concentration_identifiable": false,
       "boundary_hit": false,
       "adopted_basis": "色散留段不稳定，回退常折射率基线",
-      "systematic_low_um": 7.147891354797241,
-      "systematic_high_um": 8.334156541441242,
+      "systematic_low_um": 7.1478913547923435,
+      "systematic_high_um": 8.334156541427381,
       "band_thicknesses_um": [
-        6.99877772173107,
-        8.284811262573701,
-        7.993844873472587
+        6.998777722160732,
+        8.284811262247631,
+        7.993844873447995
       ],
-      "band_cv_pct": 8.69137743642804,
-      "max_band_shift_pct": 14.987408534726626,
+      "band_cv_pct": 8.691377431583748,
+      "max_band_shift_pct": 14.987408532620266,
       "band_stable": false,
       "scenarios": [
         {
           "name": "low",
           "epi_carrier_cm3": 1000000000000000.0,
           "substrate_carrier_cm3": 3e+17,
-          "thickness_um": 7.204972586256396,
-          "rmse_pct": 1.3394204666001204
+          "thickness_um": 7.204972586104808,
+          "rmse_pct": 1.3394204666001286
         },
         {
           "name": "medium",
           "epi_carrier_cm3": 1e+17,
           "substrate_carrier_cm3": 7.1e+18,
-          "thickness_um": 7.147891354797241,
-          "rmse_pct": 2.6798648681153128
+          "thickness_um": 7.1478913547923435,
+          "rmse_pct": 2.679864868115324
         },
         {
           "name": "high",
           "epi_carrier_cm3": 3e+18,
           "substrate_carrier_cm3": 2e+19,
-          "thickness_um": 8.334156541441242,
-          "rmse_pct": 4.321067549124976
+          "thickness_um": 8.334156541427381,
+          "rmse_pct": 4.3210675491249715
         }
       ],
       "model": "4H-SiC one-oscillator lattice + n-type Drude",
@@ -135,9 +135,9 @@
         "https://doi.org/10.1143/JJAP.45.L1226"
       ],
       "fallback_reason": "自由浓度拟合未优于固定掺杂情景；连续波段厚度稳定性未通过",
-      "statistical_std_um": 0.09997299921430913,
-      "statistical_ci95_low_um": 7.641073612073504,
-      "statistical_ci95_high_um": 8.032967768993597
+      "statistical_std_um": 0.09810635412382403,
+      "statistical_ci95_low_um": 7.644732236450855,
+      "statistical_ci95_high_um": 8.029309144616246
     },
     "enhanced_carrier_inference": {
       "material": "SiC",
@@ -156,8 +156,8 @@
       },
       "identifiability_level": "bounded_scenario",
       "candidate_thickness_um": 7.601910069817545,
-      "candidate_epi_carrier_cm3": 6.5594734269469e+17,
-      "candidate_substrate_carrier_cm3": 2.073182713083798e+18,
+      "candidate_epi_carrier_cm3": 6.559473441610266e+17,
+      "candidate_substrate_carrier_cm3": 2.0731827067097503e+18,
       "reported_epi_carrier_cm3": null,
       "reported_substrate_carrier_cm3": null,
       "epi_log10_ci90": [
@@ -166,7 +166,7 @@
       ],
       "substrate_log10_ci90": [
         17.477121254719663,
-        18.316637578884638
+        18.31663757754939
       ],
       "epi_ci90_cm3": [
         4.9518670086877856e+17,
@@ -174,23 +174,23 @@
       ],
       "substrate_ci90_cm3": [
         3.000000000000001e+17,
-        2.073182713083798e+18
+        2.0731827067097503e+18
       ],
       "epi_interval_boundary_hit": false,
       "substrate_interval_boundary_hit": true,
       "thickness_boundary_hit": true,
-      "carrier_correlation": 0.07974716571764286,
-      "fixed_scenario_improvement_pct": 2.760475619856169,
+      "carrier_correlation": 0.07974707756991777,
+      "fixed_scenario_improvement_pct": 2.7604756198563596,
       "gains": [
-        0.9706626839420359,
-        1.0519246804152227
+        0.9706626830538754,
+        1.0519246795410286
       ],
       "offsets_pct": [
-        0.16474471600314808,
-        -0.4439655772747661
+        0.16474474896174496,
+        -0.44396554386373654
       ],
-      "shared_slope_pct": -0.17604630621880865,
-      "objective": 10603.80599392715,
+      "shared_slope_pct": -0.17604641407531857,
+      "objective": 10603.805993927166,
       "fallback_reason": "物理范围外反射率占比 3.51%，超过 0.50%；轮廓区间触及浓度边界；相对固定情景改善不足 10%；厚度触及稳健锚定区间边界",
       "informative_bands_cm1": [
         [
@@ -261,23 +261,23 @@
       "thickness_valleys_um": 7.7721396632187645,
       "thickness_refined_um": 7.791441164588415,
       "fringe_spacing_cm1": 252.96666666666667,
-      "rmse_pct": 0.3573104270873323,
-      "r2": 0.5123174983286554,
-      "aicc": -11938.532634909598
+      "rmse_pct": 0.3573104270881943,
+      "r2": 0.5123174983277112,
+      "aicc": -11938.53263488158
     },
     "multi_beam": {
-      "thickness_um": 8.333315225527095,
-      "effective_reflectivity": 0.004838186752333837,
-      "phase_offset_rad": 0.592379301481484,
-      "rmse_pct": 0.2648006511730152,
-      "r2": 0.7321547860115809,
-      "aicc": -15418.408329659225,
+      "thickness_um": 8.333315251804002,
+      "effective_reflectivity": 0.004838258087874648,
+      "phase_offset_rad": 0.5923789784233113,
+      "rmse_pct": 0.2648006511748202,
+      "r2": 0.7321547860087033,
+      "aicc": -15418.408329580061,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.03663826716063821,
-      "delta_aicc": 3479.8756947496277,
-      "rmse_improvement_pct": 25.890589499003408,
+      "harmonic_ratio": 0.03663826716043959,
+      "delta_aicc": 3479.8756946984813,
+      "rmse_improvement_pct": 25.890589498677038,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
@@ -285,53 +285,53 @@
     },
     "uncertainty": {
       "mean_um": 7.791441164588415,
-      "std_um": 0.17110711966603653,
-      "ci95_low_um": 7.457869438786754,
-      "ci95_high_um": 8.101841867476562
+      "std_um": 0.1321081831259644,
+      "ci95_low_um": 7.5604977219354605,
+      "ci95_high_um": 8.051028036134431
     },
     "dispersion_joint_calibration": {
       "material": "SiC",
-      "fitted_thickness_um": 7.722230230589576,
+      "fitted_thickness_um": 7.7222302282671045,
       "adopted_thickness_um": 7.83702069053355,
-      "epi_carrier_cm3": 1.0891454752823976e+17,
-      "substrate_carrier_cm3": 3.455946134259544e+18,
-      "rmse_pct": 1.5202777120981645,
-      "jacobian_condition": 9.89225412678353,
-      "max_parameter_correlation": 0.3788668790706501,
+      "epi_carrier_cm3": 1.0891454759137104e+17,
+      "substrate_carrier_cm3": 3.455946134475224e+18,
+      "rmse_pct": 1.5202777106690906,
+      "jacobian_condition": 9.892254121159558,
+      "max_parameter_correlation": 0.3788668787641031,
       "concentration_identifiable": false,
       "boundary_hit": false,
       "adopted_basis": "色散留段不稳定，回退常折射率基线",
-      "systematic_low_um": 7.147891354797241,
-      "systematic_high_um": 8.334156541441242,
+      "systematic_low_um": 7.1478913547923435,
+      "systematic_high_um": 8.334156541427381,
       "band_thicknesses_um": [
-        6.99877772173107,
-        8.284811262573701,
-        7.993844873472587
+        6.998777722160732,
+        8.284811262247631,
+        7.993844873447995
       ],
-      "band_cv_pct": 8.69137743642804,
-      "max_band_shift_pct": 14.987408534726626,
+      "band_cv_pct": 8.691377431583748,
+      "max_band_shift_pct": 14.987408532620266,
       "band_stable": false,
       "scenarios": [
         {
           "name": "low",
           "epi_carrier_cm3": 1000000000000000.0,
           "substrate_carrier_cm3": 3e+17,
-          "thickness_um": 7.204972586256396,
-          "rmse_pct": 1.3394204666001204
+          "thickness_um": 7.204972586104808,
+          "rmse_pct": 1.3394204666001286
         },
         {
           "name": "medium",
           "epi_carrier_cm3": 1e+17,
           "substrate_carrier_cm3": 7.1e+18,
-          "thickness_um": 7.147891354797241,
-          "rmse_pct": 2.6798648681153128
+          "thickness_um": 7.1478913547923435,
+          "rmse_pct": 2.679864868115324
         },
         {
           "name": "high",
           "epi_carrier_cm3": 3e+18,
           "substrate_carrier_cm3": 2e+19,
-          "thickness_um": 8.334156541441242,
-          "rmse_pct": 4.321067549124976
+          "thickness_um": 8.334156541427381,
+          "rmse_pct": 4.3210675491249715
         }
       ],
       "model": "4H-SiC one-oscillator lattice + n-type Drude",
@@ -340,9 +340,9 @@
         "https://doi.org/10.1143/JJAP.45.L1226"
       ],
       "fallback_reason": "自由浓度拟合未优于固定掺杂情景；连续波段厚度稳定性未通过",
-      "statistical_std_um": 0.09997299921430913,
-      "statistical_ci95_low_um": 7.641073612073504,
-      "statistical_ci95_high_um": 8.032967768993597
+      "statistical_std_um": 0.09810635412382403,
+      "statistical_ci95_low_um": 7.644732236450855,
+      "statistical_ci95_high_um": 8.029309144616246
     },
     "enhanced_carrier_inference": {
       "material": "SiC",
@@ -361,8 +361,8 @@
       },
       "identifiability_level": "bounded_scenario",
       "candidate_thickness_um": 7.601910069817545,
-      "candidate_epi_carrier_cm3": 6.5594734269469e+17,
-      "candidate_substrate_carrier_cm3": 2.073182713083798e+18,
+      "candidate_epi_carrier_cm3": 6.559473441610266e+17,
+      "candidate_substrate_carrier_cm3": 2.0731827067097503e+18,
       "reported_epi_carrier_cm3": null,
       "reported_substrate_carrier_cm3": null,
       "epi_log10_ci90": [
@@ -371,7 +371,7 @@
       ],
       "substrate_log10_ci90": [
         17.477121254719663,
-        18.316637578884638
+        18.31663757754939
       ],
       "epi_ci90_cm3": [
         4.9518670086877856e+17,
@@ -379,23 +379,23 @@
       ],
       "substrate_ci90_cm3": [
         3.000000000000001e+17,
-        2.073182713083798e+18
+        2.0731827067097503e+18
       ],
       "epi_interval_boundary_hit": false,
       "substrate_interval_boundary_hit": true,
       "thickness_boundary_hit": true,
-      "carrier_correlation": 0.07974716571764286,
-      "fixed_scenario_improvement_pct": 2.760475619856169,
+      "carrier_correlation": 0.07974707756991777,
+      "fixed_scenario_improvement_pct": 2.7604756198563596,
       "gains": [
-        0.9706626839420359,
-        1.0519246804152227
+        0.9706626830538754,
+        1.0519246795410286
       ],
       "offsets_pct": [
-        0.16474471600314808,
-        -0.4439655772747661
+        0.16474474896174496,
+        -0.44396554386373654
       ],
-      "shared_slope_pct": -0.17604630621880865,
-      "objective": 10603.80599392715,
+      "shared_slope_pct": -0.17604641407531857,
+      "objective": 10603.805993927166,
       "fallback_reason": "物理范围外反射率占比 3.51%，超过 0.50%；轮廓区间触及浓度边界；相对固定情景改善不足 10%；厚度触及稳健锚定区间边界",
       "informative_bands_cm1": [
         [
@@ -466,77 +466,77 @@
       "thickness_valleys_um": 3.4425765104021426,
       "thickness_refined_um": 3.4025463670816682,
       "fringe_spacing_cm1": 430.2892499999999,
-      "rmse_pct": 0.7098583473470726,
-      "r2": 0.5713342160595215,
-      "aicc": -3965.9804837935058
+      "rmse_pct": 0.7098583473505209,
+      "r2": 0.5713342160512092,
+      "aicc": -3965.980483737089
     },
     "multi_beam": {
-      "thickness_um": 3.597949686961862,
-      "effective_reflectivity": 0.4097612594234543,
-      "phase_offset_rad": -1.3650332236009268,
-      "rmse_pct": 0.6251700895061773,
-      "r2": 0.6675151849497485,
-      "aicc": -5441.442595145209,
+      "thickness_um": 3.5979496939089293,
+      "effective_reflectivity": 0.4097612644420321,
+      "phase_offset_rad": -1.3650332704131078,
+      "rmse_pct": 0.6251700895129072,
+      "r2": 0.667515184939373,
+      "aicc": -5441.442595020184,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.19620477976085243,
-      "delta_aicc": 1475.4621113517037,
-      "rmse_improvement_pct": 11.930303863777567,
+      "harmonic_ratio": 0.19620477976248996,
+      "delta_aicc": 1475.462111283095,
+      "rmse_improvement_pct": 11.930303863257311,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
       "observable_multibeam": true
     },
     "uncertainty": {
-      "mean_um": 3.402546367081668,
-      "std_um": 0.04425421477863307,
-      "ci95_low_um": 3.3269757926661705,
-      "ci95_high_um": 3.498591109341559
+      "mean_um": 3.4025463670816682,
+      "std_um": 0.042334298769858045,
+      "ci95_low_um": 3.326060309246382,
+      "ci95_high_um": 3.4761620179941817
     },
     "dispersion_joint_calibration": {
       "material": "Si",
-      "fitted_thickness_um": 3.3456360233479243,
-      "adopted_thickness_um": 3.414231907026287,
-      "epi_carrier_cm3": 1.0346456142396454e+16,
+      "fitted_thickness_um": 3.3456360235129856,
+      "adopted_thickness_um": 3.4142319070255858,
+      "epi_carrier_cm3": 1.0346456156428064e+16,
       "substrate_carrier_cm3": 2.9999999999999767e+19,
-      "rmse_pct": 3.2367152915372595,
-      "jacobian_condition": 885.4309367130936,
-      "max_parameter_correlation": 0.5968319272681651,
+      "rmse_pct": 3.236715292091057,
+      "jacobian_condition": 885.43093547389,
+      "max_parameter_correlation": 0.5968319272803777,
       "concentration_identifiable": false,
       "boundary_hit": true,
       "adopted_basis": "固定掺杂情景：high",
-      "systematic_low_um": 3.1602050137321993,
-      "systematic_high_um": 3.884553072393689,
+      "systematic_low_um": 3.160205025021639,
+      "systematic_high_um": 3.8845530723935084,
       "band_thicknesses_um": [
-        3.4120723260588766,
-        3.4270136254727435,
-        3.4410246045543627
+        3.412072326058898,
+        3.4270136254712202,
+        3.4410246046073945
       ],
-      "band_cv_pct": 0.42252357436391275,
-      "max_band_shift_pct": 0.7847357255650352,
+      "band_cv_pct": 0.4225235751263867,
+      "max_band_shift_pct": 0.7847357271389915,
       "band_stable": true,
       "scenarios": [
         {
           "name": "low",
           "epi_carrier_cm3": 100000000000000.0,
           "substrate_carrier_cm3": 1000000000000000.0,
-          "thickness_um": 3.1602050137321993,
-          "rmse_pct": 11.733602577024627
+          "thickness_um": 3.160205025021639,
+          "rmse_pct": 11.733602582452505
         },
         {
           "name": "medium",
           "epi_carrier_cm3": 1e+16,
           "substrate_carrier_cm3": 1e+18,
-          "thickness_um": 3.884553072393689,
-          "rmse_pct": 8.922294431088893
+          "thickness_um": 3.8845530723935084,
+          "rmse_pct": 8.922294431088918
         },
         {
           "name": "high",
           "epi_carrier_cm3": 1e+18,
           "substrate_carrier_cm3": 3e+19,
-          "thickness_um": 3.414231907026287,
-          "rmse_pct": 3.1619738175288195
+          "thickness_um": 3.4142319070255858,
+          "rmse_pct": 3.161973817528826
         }
       ],
       "model": "Edwards-Ochoa background + n-type Drude",
@@ -545,9 +545,9 @@
         "https://doi.org/10.1109/PROC.1967.6123"
       ],
       "fallback_reason": "参数触及先验边界；自由浓度拟合未优于固定掺杂情景",
-      "statistical_std_um": 0.03606568109647861,
-      "statistical_ci95_low_um": 3.343543172077189,
-      "statistical_ci95_high_um": 3.484920641975385
+      "statistical_std_um": 0.03624243043795531,
+      "statistical_ci95_low_um": 3.3431967433671934,
+      "statistical_ci95_high_um": 3.485267070683978
     }
   },
   "si_15": {
@@ -607,23 +607,23 @@
       "thickness_valleys_um": 3.4716430657795114,
       "thickness_refined_um": 3.410467690554108,
       "fringe_spacing_cm1": 430.04800000000006,
-      "rmse_pct": 0.7852616109737601,
-      "r2": 0.5300001763331075,
-      "aicc": -2793.529933541113
+      "rmse_pct": 0.7852616109767189,
+      "r2": 0.5300001763242733,
+      "aicc": -2793.529933497354
     },
     "multi_beam": {
-      "thickness_um": 3.5843232250460453,
-      "effective_reflectivity": 0.4219976868081384,
-      "phase_offset_rad": -1.4710060444205109,
-      "rmse_pct": 0.7173019427784392,
-      "r2": 0.6078312572343718,
-      "aicc": -3844.8298297910496,
+      "thickness_um": 3.584323243756727,
+      "effective_reflectivity": 0.42199774305114934,
+      "phase_offset_rad": -1.4710061699237527,
+      "rmse_pct": 0.7173019427822334,
+      "r2": 0.6078312572258071,
+      "aicc": -3844.829829729618,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.22160394732825228,
-      "delta_aicc": 1051.2998962499364,
-      "rmse_improvement_pct": 8.654398387188172,
+      "harmonic_ratio": 0.22160394732976657,
+      "delta_aicc": 1051.299896232264,
+      "rmse_improvement_pct": 8.654398387049174,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
@@ -631,53 +631,53 @@
     },
     "uncertainty": {
       "mean_um": 3.410467690554108,
-      "std_um": 0.06223492051462157,
-      "ci95_low_um": 3.2865350722153144,
-      "ci95_high_um": 3.496768603062943
+      "std_um": 0.07012735467823021,
+      "ci95_low_um": 3.2900861017008296,
+      "ci95_high_um": 3.538195596488527
     },
     "dispersion_joint_calibration": {
       "material": "Si",
-      "fitted_thickness_um": 3.3456360233479243,
-      "adopted_thickness_um": 3.414231907026287,
-      "epi_carrier_cm3": 1.0346456142396454e+16,
+      "fitted_thickness_um": 3.3456360235129856,
+      "adopted_thickness_um": 3.4142319070255858,
+      "epi_carrier_cm3": 1.0346456156428064e+16,
       "substrate_carrier_cm3": 2.9999999999999767e+19,
-      "rmse_pct": 3.2367152915372595,
-      "jacobian_condition": 885.4309367130936,
-      "max_parameter_correlation": 0.5968319272681651,
+      "rmse_pct": 3.236715292091057,
+      "jacobian_condition": 885.43093547389,
+      "max_parameter_correlation": 0.5968319272803777,
       "concentration_identifiable": false,
       "boundary_hit": true,
       "adopted_basis": "固定掺杂情景：high",
-      "systematic_low_um": 3.1602050137321993,
-      "systematic_high_um": 3.884553072393689,
+      "systematic_low_um": 3.160205025021639,
+      "systematic_high_um": 3.8845530723935084,
       "band_thicknesses_um": [
-        3.4120723260588766,
-        3.4270136254727435,
-        3.4410246045543627
+        3.412072326058898,
+        3.4270136254712202,
+        3.4410246046073945
       ],
-      "band_cv_pct": 0.42252357436391275,
-      "max_band_shift_pct": 0.7847357255650352,
+      "band_cv_pct": 0.4225235751263867,
+      "max_band_shift_pct": 0.7847357271389915,
       "band_stable": true,
       "scenarios": [
         {
           "name": "low",
           "epi_carrier_cm3": 100000000000000.0,
           "substrate_carrier_cm3": 1000000000000000.0,
-          "thickness_um": 3.1602050137321993,
-          "rmse_pct": 11.733602577024627
+          "thickness_um": 3.160205025021639,
+          "rmse_pct": 11.733602582452505
         },
         {
           "name": "medium",
           "epi_carrier_cm3": 1e+16,
           "substrate_carrier_cm3": 1e+18,
-          "thickness_um": 3.884553072393689,
-          "rmse_pct": 8.922294431088893
+          "thickness_um": 3.8845530723935084,
+          "rmse_pct": 8.922294431088918
         },
         {
           "name": "high",
           "epi_carrier_cm3": 1e+18,
           "substrate_carrier_cm3": 3e+19,
-          "thickness_um": 3.414231907026287,
-          "rmse_pct": 3.1619738175288195
+          "thickness_um": 3.4142319070255858,
+          "rmse_pct": 3.161973817528826
         }
       ],
       "model": "Edwards-Ochoa background + n-type Drude",
@@ -686,9 +686,9 @@
         "https://doi.org/10.1109/PROC.1967.6123"
       ],
       "fallback_reason": "参数触及先验边界；自由浓度拟合未优于固定掺杂情景",
-      "statistical_std_um": 0.03606568109647861,
-      "statistical_ci95_low_um": 3.343543172077189,
-      "statistical_ci95_high_um": 3.484920641975385
+      "statistical_std_um": 0.03624243043795531,
+      "statistical_ci95_low_um": 3.3431967433671934,
+      "statistical_ci95_high_um": 3.485267070683978
     }
   }
 }

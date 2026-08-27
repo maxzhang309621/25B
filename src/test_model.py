@@ -57,6 +57,10 @@ from plotting import (
     plot_summary_figures,
 )
 from preprocess import ProcessedSpectrum
+from raw_evidence_plotting import (
+    plot_raw_dispersion_evidence,
+    plot_raw_multibeam_evidence,
+)
 from two_beam import estimate_two_beam
 
 
@@ -365,6 +369,37 @@ class VisualizationTests(unittest.TestCase):
             }
             self.assertEqual({path.name for path in output.glob("*.png")}, expected)
             self.assertTrue(all((output / name).stat().st_size > 1000 for name in expected))
+            x = np.linspace(1100.0, 4000.0, 1800)
+            residual = np.cos(2 * np.pi * x / 75.0)
+            source = Spectrum(
+                x,
+                20.0 + residual,
+                DATASETS[0],
+                {},
+            )
+            processed = ProcessedSpectrum(
+                x,
+                20.0 + residual,
+                20.0 + residual,
+                np.full_like(x, 20.0),
+                residual,
+                float(np.median(np.diff(x))),
+                source,
+            )
+            two = estimate_two_beam(processed)
+            raw_dir = output / "raw_evidence" / "multibeam"
+            plot_raw_multibeam_evidence(
+                summary,
+                [
+                    (dataset, processed, two)
+                    for dataset in summary["dataset"].tolist()
+                ],
+                raw_dir,
+            )
+            raw_paths = list(raw_dir.glob("*.png"))
+            self.assertEqual(len(raw_paths), 8)
+            self.assertTrue(all(path.stat().st_size > 1000 for path in raw_paths))
+            self.assertTrue(all(imread(path).shape[1] >= 1800 for path in raw_paths))
 
     def test_dispersion_and_flowchart_figures_are_created(self):
         x = np.linspace(700.0, 4000.0, 30)
@@ -454,6 +489,12 @@ class VisualizationTests(unittest.TestCase):
                 },
                 paths[4],
             )
+            raw_dir = output / "raw_evidence" / "dispersion"
+            plot_raw_dispersion_evidence(curves, results, profile, raw_dir)
+            raw_paths = list(raw_dir.glob("*.png"))
+            self.assertEqual(len(raw_paths), 9)
+            self.assertTrue(all(path.stat().st_size > 1000 for path in raw_paths))
+            self.assertTrue(all(imread(path).shape[1] >= 1800 for path in raw_paths))
             self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
             self.assertTrue(all(imread(path).shape[1] >= 1800 for path in paths))
 

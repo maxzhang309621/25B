@@ -356,3 +356,49 @@ g(\tilde\nu,\theta_0)=\tilde\nu\sqrt{n^2(\tilde\nu)-\sin^2\theta_0}.
 | R3 | 实现 SiC 单浓度条件、双浓度联合与层级回退 | R3 | SciPy 稳健最小二乘 |
 | R4 | 实现 logN 轮廓扫描、90% 区间及可辨识性等级 | R4 | Profile likelihood |
 | R5 | 接入主流程、条件输出、可视化和合成/异常测试 | 全部 | v5 架构验收标准 |
+
+## v6 论文图防重叠与独立原始证据图算法方案
+
+### 步骤 V6-1：全局布局和图例避让
+
+- 选定算法：Matplotlib constrained layout，配合图级标题、轴级标题分层；多曲线图采用图外图例或 `bbox_to_anchor`，保存时使用 `bbox_inches="tight"` 与显式边距。
+- 选型理由：项目已有 Matplotlib 依赖，官方布局引擎能让标题、坐标轴和图例参与边界计算，无需增加第三方依赖；固定图例区比在数据区自动寻找位置更稳定、可复现。
+- 参考资料：
+  - https://matplotlib.org/stable/users/explain/axes/legend_guide.html
+  - https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html
+- 接口约定：现有绘图函数输入保持不变，仅统一图布置、保存和字体参数。
+
+### 步骤 V6-2：数据标签确定性避让
+
+- 选定算法：按横坐标排序后进行一维间距检测；相邻标签不足最小显示距离时，采用上下交替的 `annotate(..., textcoords="offset points")` 偏移；绘图后按数据跨度扩展纵轴 10%–20%。柱图使用 `bar_label` 显式 padding 并预留标签坐标范围。
+- 选型理由：当前标签数量少且顺序固定，确定性贪心避让轻量、稳定，并可限制标签移动方向以避开线条。
+- 参考资料：
+  - https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.annotate.html
+  - https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.bar_label.html
+- 依赖：无新增依赖。
+
+### 步骤 V6-3：独立多光束原始证据导出
+
+- 选定算法：单指标单坐标轴导出；四项标量证据分别读取现有汇总字段生成数据图，附件频谱直接复用已有频率—幅值诊断数组逐数据集导出。
+- 选型理由：复用已有计算结果保证与主结论数值同源；每图只保留标题、轴、单位和图例，可直接作为论文证据素材。
+- 接口约定：处理后频谱及汇总结果 → `output/raw_evidence/multibeam/*.png`。
+
+### 步骤 V6-4：独立色散原始数据导出
+
+- 选定算法：从折射率曲线表、情景拟合、留段厚度和载流子轮廓表分别生成单物理量单图；轮廓图只画目标函数曲线，不写阈值结论或区间说明。
+- 选型理由：按数据层拆分后可独立引用；直接使用导出表可执行图—表一致性检查。
+- 接口约定：色散表、材料 payload、轮廓表 → `output/raw_evidence/dispersion/*.png`。
+
+### 步骤 V6-5：图像与文字约束回归
+
+- 选定算法：文件清单、像素尺寸、PNG 非空校验；通过 Figure Artist 文本集合检查独立图不含禁止词；对渲染后边界框执行标题、图例和数值标签明显交集检测。
+- 选型理由：文件存在检查不能防止布局回归，渲染后的 Artist 边界更接近最终 PNG。
+
+### v6 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| V6-A | 统一现有综合图布局、字体、边距、图例和标签避让 | V6-1、V6-2 | Matplotlib 官方文档 |
+| V6-B | 新建独立多光束原始证据绘图模块并接入主流程 | V6-3 | 现有谐波与模型比较结果 |
+| V6-C | 新建独立色散原始证据绘图并接入主流程 | V6-4 | 现有色散、情景和轮廓结果 |
+| V6-D | 增加布局、输出清单和禁止文字回归测试，运行端到端程序 | V6-5 | Matplotlib Artist API |

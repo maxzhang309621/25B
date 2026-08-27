@@ -47,12 +47,18 @@ def _apply_style() -> None:
             "font.sans-serif": ["Microsoft YaHei", "SimHei", "DejaVu Sans"],
             "axes.unicode_minus": False,
             "axes.titlesize": 11,
-            "axes.labelsize": 9,
-            "legend.fontsize": 8,
-            "xtick.labelsize": 8,
-            "ytick.labelsize": 8,
+            "axes.titlepad": 10,
+            "axes.labelsize": 10,
+            "legend.fontsize": 9,
+            "legend.framealpha": 1.0,
+            "legend.facecolor": "white",
+            "legend.edgecolor": "#B0B0B0",
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
             "grid.alpha": 0.22,
             "lines.linewidth": 1.1,
+            "figure.facecolor": "white",
+            "axes.facecolor": "white",
         }
     )
 
@@ -67,6 +73,8 @@ def _panel_label(ax, label: str) -> None:
         ha="left",
         fontsize=11,
         fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.92},
+        zorder=20,
     )
 
 
@@ -90,7 +98,7 @@ def plot_spectrum_fit(
     )
     selected_model = "Airy 多光束" if diagnostic.observable_multibeam else "双光束"
 
-    fig = plt.figure(figsize=(16, 13), layout="constrained")
+    fig = plt.figure(figsize=(17.5, 14.5), layout="constrained")
     axes = fig.subplot_mosaic(
         [
             ["raw", "raw", "evidence"],
@@ -237,15 +245,16 @@ def plot_spectrum_fit(
         suffix = "PASS" if flag else "FAIL"
         clipped = " ≥3×" if norm >= 3 else f" {norm:.2f}×"
         ax.text(
-            min(shown[y] + 0.06, 2.45),
+            shown[y] + 0.08,
             y,
             f"{raw:.3g} / {threshold:g}{clipped}  {suffix}",
             va="center",
             fontsize=8,
+            bbox={"boxstyle": "round,pad=0.12", "fc": "white", "ec": "none", "alpha": 0.9},
         )
     ax.set_yticks(positions, metric_labels)
     ax.invert_yaxis()
-    ax.set_xlim(0, 3.05)
+    ax.set_xlim(0, 4.35)
     ax.set_xlabel("指标值 / 判据阈值（3×以上截断显示）")
     ax.set_title("多光束四项证据")
     ax.legend(loc="lower right")
@@ -253,7 +262,7 @@ def plot_spectrum_fit(
     conclusion = "支持可观测多光束干涉" if diagnostic.observable_multibeam else "多光束证据不足"
     ax.text(
         0.5,
-        -0.22,
+        -0.18,
         (
             f"最终判定：{conclusion}\n"
             f"采用模型：{selected_model}；厚度={selected_um:.3f} µm\n"
@@ -263,7 +272,7 @@ def plot_spectrum_fit(
         transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=10,
+        fontsize=9,
         fontweight="bold",
         bbox={
             "boxstyle": "round,pad=0.55",
@@ -331,10 +340,11 @@ def plot_thickness_comparison(summary: pd.DataFrame, path: Path) -> None:
             ax.annotate(
                 f"{row['selected_thickness_um']:.3f}\n{row['selected_model']}",
                 (position, row["selected_thickness_um"]),
-                xytext=(0, 12),
+                xytext=(0, 14 if position % 2 == 0 else -30),
                 textcoords="offset points",
                 ha="center",
                 fontsize=8,
+                bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.9},
             )
         labels = [f"{angle:g}°" for angle in subset["angle_deg"]]
         if has_dispersion:
@@ -385,11 +395,13 @@ def plot_thickness_comparison(summary: pd.DataFrame, path: Path) -> None:
                 textcoords="offset points",
                 ha="center",
                 fontsize=8,
+                bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.9},
             )
             x = np.r_[x, joint_x]
             labels.append("色散联合")
         ax.set_xticks(x, labels)
         ax.set(title=material, ylabel="外延层厚度 (µm)")
+        ax.margins(y=0.24)
         ax.legend(loc="best")
         ax.grid(True, axis="y")
     fig.suptitle(
@@ -432,8 +444,15 @@ def plot_angle_consistency(
                 ls="-.",
                 label=f"色散门控采用={dispersion:.3f} µm",
             )
-        for angle, value in zip(angles, values):
-            ax.annotate(f"{value:.3f}", (angle, value), xytext=(0, 8), textcoords="offset points", ha="center")
+        for index, (angle, value) in enumerate(zip(angles, values)):
+            ax.annotate(
+                f"{value:.3f}",
+                (angle, value),
+                xytext=(0, 10 if index % 2 == 0 else -22),
+                textcoords="offset points",
+                ha="center",
+                bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.9},
+            )
         ax.text(
             0.5,
             0.06,
@@ -444,6 +463,7 @@ def plot_angle_consistency(
         )
         ax.set_xticks(angles, [f"{angle:g}°" for angle in angles])
         ax.set(title=material, xlabel="入射角", ylabel="最终厚度 (µm)")
+        ax.margins(y=0.24)
         ax.legend(loc="best")
         ax.grid(True)
     fig.suptitle("双入射角厚度一致性与联合估计", fontsize=14, fontweight="bold")
@@ -513,9 +533,10 @@ def plot_model_quality(summary: pd.DataFrame, path: Path) -> None:
     improvements = summary["rmse_improvement_pct"].to_numpy(float)
     bars = axes[1].bar(x, improvements, color=COLORS["selected"])
     axes[1].axhline(THRESHOLDS["rmse_improvement_pct"], color="black", ls="--", label="2% 判据")
-    axes[1].bar_label(bars, labels=[f"{value:.1f}%" for value in improvements], padding=3)
+    axes[1].bar_label(bars, labels=[f"{value:.1f}%" for value in improvements], padding=5)
     axes[1].set_xticks(x, labels)
     axes[1].set(title="Airy 相对双光束的 RMSE 改善", ylabel="改善率 (%)")
+    axes[1].margins(y=0.18)
     axes[1].legend()
     axes[1].grid(True, axis="y")
 
@@ -624,16 +645,13 @@ def plot_carrier_scenarios(results: dict, path: Path) -> None:
         )
         for position, item in zip(positions, scenarios):
             ax.annotate(
-                (
-                    f"{item['thickness_um']:.3f}\n"
-                    f"$N_e$={item['epi_carrier_cm3']:.1e}\n"
-                    f"$N_s$={item['substrate_carrier_cm3']:.1e}"
-                ),
+                f"{item['thickness_um']:.3f}",
                 (position, item["thickness_um"]),
-                xytext=(0, 9),
+                xytext=(0, 11 if position % 2 == 0 else -24),
                 textcoords="offset points",
                 ha="center",
-                fontsize=7,
+                fontsize=8,
+                bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none", "alpha": 0.9},
             )
         span = max(float(np.ptp(thickness)), 0.08 * float(np.mean(thickness)))
         ax.set_ylim(float(np.min(thickness) - 0.16 * span), float(np.max(thickness) + 0.32 * span))
@@ -653,6 +671,7 @@ def plot_carrier_scenarios(results: dict, path: Path) -> None:
         )
         ax.set_xticks(positions, labels)
         ax.set(title=f"{material}：情景拟合质量", ylabel="RMSE (%)")
+        ax.margins(y=0.18)
         ax.grid(True, axis="y")
         ax.legend(loc="best")
     fig.suptitle(
@@ -709,16 +728,16 @@ def plot_identifiability_diagnostics(results: dict, path: Path) -> None:
         )
         status = "可辨识" if result["concentration_identifiable"] else "不可唯一辨识"
         ax.text(
-            0.98,
-            0.50,
+            0.5,
+            -0.22,
             (
                 f"浓度：{status}\n"
                 f"边界命中：{'是' if result['boundary_hit'] else '否'}\n"
                 f"采用依据：{result['adopted_basis']}"
             ),
             transform=ax.transAxes,
-            ha="right",
-            va="center",
+            ha="center",
+            va="top",
             fontsize=8,
             bbox={"boxstyle": "round", "fc": "white", "alpha": 0.9},
         )

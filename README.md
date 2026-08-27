@@ -124,6 +124,11 @@ python main.py --fast --bootstrap 10
 - `output/model_flowchart.png`：当前完整数学模型流程图；
 - `docs/model-flowchart.md`：可编辑 Mermaid 流程图及核心公式。
 
+论文原始数据图（仅保留标题、坐标、单位和必要图例）：
+
+- `output/raw_evidence/multibeam/`：多光束四项指标的独立图，以及四个附件各自的频率—幅值图，共 8 张；
+- `output/raw_evidence/dispersion/`：SiC/Si 的 \(n,k\)、情景厚度、情景 RMSE、连续留段厚度和双层浓度轮廓，共 9 张。
+
 ## 使用的主要方法
 
 - Savitzky–Golay 双尺度滤波；
