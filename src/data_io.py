@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from config import DatasetSpec
+from config import ROOT, DatasetSpec
 
 
 @dataclass
@@ -42,8 +42,13 @@ def load_spectrum(data_dir: Path, spec: DatasetSpec) -> Spectrum:
     if first_zero:
         x, y = x[1:], y[1:]
 
+    try:
+        source_path = path.relative_to(ROOT).as_posix()
+    except ValueError:
+        source_path = path.as_posix()
+
     audit = {
-        "source": str(path),
+        "source": source_path,
         "rows_in_file": int(len(frame)),
         "valid_points": int(len(x)),
         "nonfinite_rows": int((~finite).sum()),
