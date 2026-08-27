@@ -56,33 +56,33 @@
       "thickness_valleys_um": 7.925785674961702,
       "thickness_refined_um": 7.882600216478686,
       "fringe_spacing_cm1": 249.3346666666667,
-      "rmse_pct": 0.35599449984065334,
-      "r2": 0.5187254759584597,
-      "aicc": -11981.384424668167
+      "rmse_pct": 0.3559944998295777,
+      "r2": 0.5187254759723308,
+      "aicc": -11981.3844250295
     },
     "multi_beam": {
-      "thickness_um": 8.49759749807955,
-      "effective_reflectivity": 0.010926157048141925,
-      "phase_offset_rad": -3.141592653589793,
-      "rmse_pct": 0.2750391942920987,
-      "r2": 0.7127265625038954,
-      "aicc": -14977.81580422342,
+      "thickness_um": 8.448785928158149,
+      "effective_reflectivity": 0.002,
+      "phase_offset_rad": 0.2858493523773449,
+      "rmse_pct": 0.27324597057771527,
+      "r2": 0.7164603299474632,
+      "aicc": -15053.785667400722,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.01855835213880671,
-      "delta_aicc": 2996.4313795552534,
-      "rmse_improvement_pct": 22.740605707332843,
+      "harmonic_ratio": 0.01855835213703244,
+      "delta_aicc": 3072.401242371221,
+      "rmse_improvement_pct": 23.24432801390919,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
       "observable_multibeam": false
     },
     "uncertainty": {
-      "mean_um": 7.8826002164786875,
-      "std_um": 0.14649046065514845,
-      "ci95_low_um": 7.677290087027449,
-      "ci95_high_um": 8.15218541700371
+      "mean_um": 7.882600216478686,
+      "std_um": 0.12318646285922305,
+      "ci95_low_um": 7.6454036580114035,
+      "ci95_high_um": 8.135655087209146
     }
   },
   "sic_15": {
@@ -142,23 +142,23 @@
       "thickness_valleys_um": 7.7721396632187645,
       "thickness_refined_um": 7.791441164588415,
       "fringe_spacing_cm1": 252.96666666666667,
-      "rmse_pct": 0.3573104270938033,
-      "r2": 0.5123174983215574,
-      "aicc": -11938.532634699266
+      "rmse_pct": 0.3573104270873323,
+      "r2": 0.5123174983286554,
+      "aicc": -11938.532634909598
     },
     "multi_beam": {
-      "thickness_um": 8.41475645775549,
-      "effective_reflectivity": 0.017102129337076923,
-      "phase_offset_rad": -3.141592653589793,
-      "rmse_pct": 0.2776363327693733,
-      "r2": 0.7055589270698368,
-      "aicc": -14868.661746090276,
+      "thickness_um": 8.333315225527095,
+      "effective_reflectivity": 0.004838186752333837,
+      "phase_offset_rad": 0.592379301481484,
+      "rmse_pct": 0.2648006511730152,
+      "r2": 0.7321547860115809,
+      "aicc": -15418.408329659225,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.0366382671591428,
-      "delta_aicc": 2930.12911139101,
-      "rmse_improvement_pct": 22.298284148173906,
+      "harmonic_ratio": 0.03663826716063821,
+      "delta_aicc": 3479.8756947496277,
+      "rmse_improvement_pct": 25.890589499003408,
       "reflectivity_support": false,
       "harmonic_support": false,
       "model_support": true,
@@ -166,9 +166,9 @@
     },
     "uncertainty": {
       "mean_um": 7.791441164588415,
-      "std_um": 0.1321081831259644,
-      "ci95_low_um": 7.5604977219354605,
-      "ci95_high_um": 8.051028036134431
+      "std_um": 0.17110711966603653,
+      "ci95_low_um": 7.457869438786754,
+      "ci95_high_um": 8.101841867476562
     }
   },
   "si_10": {
@@ -228,33 +228,33 @@
       "thickness_valleys_um": 3.4425765104021426,
       "thickness_refined_um": 3.4025463670816682,
       "fringe_spacing_cm1": 430.2892499999999,
-      "rmse_pct": 0.7098583473729596,
-      "r2": 0.5713342159971024,
-      "aicc": -3965.980483369969
+      "rmse_pct": 0.7098583473470726,
+      "r2": 0.5713342160595215,
+      "aicc": -3965.9804837935058
     },
     "multi_beam": {
-      "thickness_um": 3.597949728783968,
-      "effective_reflectivity": 0.4097612707606088,
-      "phase_offset_rad": -1.365033526353832,
-      "rmse_pct": 0.6251700895567345,
-      "r2": 0.6675151848718088,
-      "aicc": -5441.442594205991,
+      "thickness_um": 3.597949686961862,
+      "effective_reflectivity": 0.4097612594234543,
+      "phase_offset_rad": -1.3650332236009268,
+      "rmse_pct": 0.6251700895061773,
+      "r2": 0.6675151849497485,
+      "aicc": -5441.442595145209,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.19620477977314368,
-      "delta_aicc": 1475.4621108360216,
-      "rmse_improvement_pct": 11.930303859867118,
+      "harmonic_ratio": 0.19620477976085243,
+      "delta_aicc": 1475.4621113517037,
+      "rmse_improvement_pct": 11.930303863777567,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
       "observable_multibeam": true
     },
     "uncertainty": {
-      "mean_um": 3.4025463670816682,
-      "std_um": 0.042334298769858045,
-      "ci95_low_um": 3.326060309246382,
-      "ci95_high_um": 3.4761620179941817
+      "mean_um": 3.402546367081668,
+      "std_um": 0.04425421477863307,
+      "ci95_low_um": 3.3269757926661705,
+      "ci95_high_um": 3.498591109341559
     }
   },
   "si_15": {
@@ -314,23 +314,23 @@
       "thickness_valleys_um": 3.4716430657795114,
       "thickness_refined_um": 3.410467690554108,
       "fringe_spacing_cm1": 430.04800000000006,
-      "rmse_pct": 0.7852616109959818,
-      "r2": 0.5300001762667491,
-      "aicc": -2793.5299332124564
+      "rmse_pct": 0.7852616109737601,
+      "r2": 0.5300001763331075,
+      "aicc": -2793.529933541113
     },
     "multi_beam": {
-      "thickness_um": 3.5843233421601317,
-      "effective_reflectivity": 0.421997765725107,
-      "phase_offset_rad": -1.4710067793878074,
-      "rmse_pct": 0.717301942806973,
-      "r2": 0.6078312571699972,
-      "aicc": -3844.8298293290513,
+      "thickness_um": 3.5843232250460453,
+      "effective_reflectivity": 0.4219976868081384,
+      "phase_offset_rad": -1.4710060444205109,
+      "rmse_pct": 0.7173019427784392,
+      "r2": 0.6078312572343718,
+      "aicc": -3844.8298297910496,
       "optimization_success": true
     },
     "diagnostic": {
-      "harmonic_ratio": 0.22160394733961017,
-      "delta_aicc": 1051.299896116595,
-      "rmse_improvement_pct": 8.654398386139436,
+      "harmonic_ratio": 0.22160394732825228,
+      "delta_aicc": 1051.2998962499364,
+      "rmse_improvement_pct": 8.654398387188172,
       "reflectivity_support": true,
       "harmonic_support": true,
       "model_support": true,
@@ -338,9 +338,9 @@
     },
     "uncertainty": {
       "mean_um": 3.410467690554108,
-      "std_um": 0.07012735467823021,
-      "ci95_low_um": 3.2900861017008296,
-      "ci95_high_um": 3.538195596488527
+      "std_um": 0.06223492051462157,
+      "ci95_low_um": 3.2865350722153144,
+      "ci95_high_um": 3.496768603062943
     }
   }
 }
