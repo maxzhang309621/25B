@@ -265,3 +265,94 @@ g(\tilde\nu,\theta_0)=\tilde\nu\sqrt{n^2(\tilde\nu)-\sin^2\theta_0}.
 | D3 | 实现双角度联合拟合、参数门控和掺杂情景分析 | D4、D5 | SciPy least_squares |
 | D4 | 接入主流程与 CSV/JSON 输出，更新建模说明 | D5 | 现有输出接口 |
 | D5 | 添加物理极限、合成恢复、回归和端到端测试 | 全部 | v3 架构验收标准 |
+
+## v4 色散模型可视化算法方案
+
+### 步骤 P1：厚度与双角度图更新
+
+- 选定算法：Matplotlib 分面散点、非对称 `errorbar` 和半透明系统区间。
+- 选型理由：同一画面可区分原双/多光束结果、色散自由拟合、门控后采用值、条件统计区间及更宽的掺杂系统范围。
+- 接口：`thickness_summary` 与 `consistency` → 更新后的厚度和角度一致性 PNG。
+- 参考资料：https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.errorbar.html
+
+### 步骤 P2：折射率、情景与可辨识性图
+
+- 选定算法：
+  1. `dispersion_curves.png` 使用 2×2 分面折线，分别显示 SiC/Si 的 \(n\)、\(k\)，外延层与衬底共享颜色语义；
+  2. `carrier_scenarios.png` 使用厚度点图和 RMSE 柱图，浓度标签采用科学计数法；
+  3. `identifiability_diagnostics.png` 使用连续波段厚度折线与门控指标条形图，阈值归一为 1。
+- 选型理由：将曲线、情景比较和“为何回退”拆成三张图，避免在一张图中混合不同单位与结论层级。
+- 接口：`refractive_index_curves`、材料级联合结果 → 3 张 PNG。
+- 参考资料：
+  - Matplotlib `subplot_mosaic`：https://matplotlib.org/stable/users/explain/axes/mosaic.html
+  - Matplotlib `fill_between`：https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.fill_between.html
+
+### 步骤 P3：数学模型流程图
+
+- 选定算法：传统 Mermaid `flowchart TD` 语法保存可编辑源文件；Matplotlib `FancyBboxPatch`、菱形 `Polygon` 和 `FancyArrowPatch` 生成同逻辑高清 PNG。
+- 选型理由：Mermaid 便于后续调整，Matplotlib PNG 无需 Graphviz/Node 依赖，可由现有 Python 环境稳定重现。
+- 节点：附件输入 → 审计/预处理 → 常数粗估 → 本征色散与载流子项 → 外延层/衬底复折射率 → Fresnel–Airy → 双角度联合校准 → 可辨识性/留段门控 → 自由拟合、固定情景或基线回退 → 统计与系统误差 → 最终输出。
+- 参考资料：https://mermaid.ai/docs/build-and-edit/write-diagram-syntax
+
+### v4 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| P1 | 更新厚度与角度一致性汇总图 | P1 | Matplotlib errorbar |
+| P2 | 新增折射率曲线、掺杂情景和可辨识性图 | P2 | subplot_mosaic/fill_between |
+| P3 | 新增 Mermaid 文档和 Matplotlib 流程图生成器 | P3 | Mermaid/Matplotlib patches |
+| P4 | 接入主流程、更新 README/model 文档并增加图片测试 | 全部 | v4 架构验收标准 |
+
+## v5 SiC 反射率浓度反演增强算法方案
+
+### 步骤 R1：浓度信息波段与物理权重
+
+- 选定算法：SiC 700–1200 cm⁻¹ 声子—等离子体区作为浓度主通道，1200–4000 cm⁻¹ 透明区作为厚度锚点；1300–1600 cm⁻¹ 二声子区降权而非硬删除。
+- 选型理由：Oishi 的 80–2000 cm⁻¹ 全线形反演和 Tiwald 的 700–4000 cm⁻¹ 椭偏数据均表明 Reststrahlen/等离子体线形包含浓度信息；简单单振子模型不足以精确解释二声子区，稳健降权比任意新增振子自由度更适合当前无样品元数据场景。
+- 参考资料：
+  - https://doi.org/10.1143/JJAP.45.L1226
+  - https://doi.org/10.1103/PhysRevB.60.11464
+
+### 步骤 R2：受约束仪器响应
+
+- 选定算法：多数据集变量投影/受约束仪器模型；两角度共享平滑线性响应，每角度只允许有界增益与偏置，不再使用独立 `z×R` 交互项。
+- 选型理由：原四列线性剖面会吸收 Drude 慢变形状；共享响应减少仪器自由度，同时保留附件 2 超过 100% 所需的校正能力。
+- 参数范围：角度增益限制在 0.85–1.15，偏置限制在 ±8 个百分点，共享线性漂移限制在 ±5 个百分点。
+- 参考资料：
+  - Golub–Pereyra 变量投影：https://doi.org/10.1137/0710036
+  - 光谱变量投影综述：https://doi.org/10.1007/s11075-008-9235-2
+
+### 步骤 R3：分阶段浓度反演
+
+- 选定算法：
+  1. 固定浓度先验，在透明区确定厚度窄区间；
+  2. 分别固定衬底情景反演外延层浓度、固定外延层情景反演衬底浓度；
+  3. 仅当灵敏度独立性通过时才开放双浓度联合拟合；
+  4. 全部模型使用两个角度共享样品参数和稳健损失。
+- 选型理由：优先得到单浓度条件区间，避免在数据不支持时直接同时开放两个高度相关的载流子参数。
+- 输出：双浓度、单浓度条件、浓度等级、单侧界限或不可辨识五级结果。
+
+### 步骤 R4：轮廓似然区间与可辨识性
+
+- 选定算法：在 \(\log_{10}N\) 网格上固定目标参数、重新优化厚度及其余参数，以 \(\Delta\chi^2=2.706\) 构造 90% 轮廓区间；区间触边则标记单侧或无界。
+- 选型理由：非线性厚度—浓度补偿下，局部协方差会低估不确定度；轮廓似然能直接检测平坦方向和参数边界。
+- 参考资料：
+  - Raue et al.：https://doi.org/10.1093/bioinformatics/btp358
+  - Kreutz et al.：https://doi.org/10.1111/febs.12276
+- 门控：双浓度相关系数绝对值 <0.85、区间宽度 ≤0.6 dex、相对固定情景预测改善 ≥10%；单浓度条件区间宽度 ≤1.0 dex。
+
+### 步骤 R5：数据资格与条件输出
+
+- 选定算法：原始反射率物理范围审计。超界点比例 >0.5% 时进入 `relative_shape` 模式；浓度候选值只进入诊断，主结果输出条件区间或 `null`。
+- 当前数据：附件 2 约 3.51% 点超过 100%，因此 SiC 必须标记为相对谱形模式。
+- 输出：新增 `carrier_inference.json` 和 `carrier_profile.csv`；`thickness_summary.csv` 仅在门控通过时写浓度点估计。
+
+### v5 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| R1 | 实现材料分波段权重和数据资格审查 | R1、R5 | Oishi/Tiwald |
+| R2 | 实现共享且有界的仪器响应模型 | R2 | Variable Projection |
+| R3 | 实现 SiC 单浓度条件、双浓度联合与层级回退 | R3 | SciPy 稳健最小二乘 |
+| R4 | 实现 logN 轮廓扫描、90% 区间及可辨识性等级 | R4 | Profile likelihood |
+| R5 | 接入主流程、条件输出、可视化和合成/异常测试 | 全部 | v5 架构验收标准 |

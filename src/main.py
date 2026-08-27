@@ -10,11 +10,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from carrier_inference import infer_carrier_concentrations
 from config import BOOTSTRAP_BLOCK_CM1, DATASETS, DATA_DIR, OUTPUT_DIR
 from data_io import load_spectrum
 from diagnostics import diagnose_multibeam
 from dispersion import METADATA
 from joint_calibration import fit_joint_calibration, refractive_index_rows
+from model_flowchart import plot_model_flowchart
 from multi_beam import fit_multi_beam
 from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
@@ -161,11 +163,13 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         summary.loc[material_mask, "dispersion_stat_ci95_high_um"] = (
             joint.statistical_ci95_high_um
         )
-        summary.loc[material_mask, "epi_carrier_cm3"] = joint.epi_carrier_cm3
-        summary.loc[material_mask, "substrate_carrier_cm3"] = (
+        summary.loc[material_mask, "candidate_epi_carrier_cm3"] = (
+            joint.epi_carrier_cm3
+        )
+        summary.loc[material_mask, "candidate_substrate_carrier_cm3"] = (
             joint.substrate_carrier_cm3
         )
-        summary.loc[material_mask, "carrier_concentration_identifiable"] = (
+        summary.loc[material_mask, "dispersion_candidate_identifiable"] = (
             joint.concentration_identifiable
         )
         for key, _, _ in items:
@@ -174,6 +178,35 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         refractive_rows.extend(
             refractive_index_rows(material, joint, np.linspace(lo, hi, 300))
         )
+
+    sic_items = material_inputs["SiC"]
+    carrier_result, carrier_profile_rows = infer_carrier_concentrations(
+        [item[1] for item in sic_items],
+        [item[2] for item in sic_items],
+        material="SiC",
+    )
+    carrier_payload = carrier_result.to_dict()
+    sic_mask = summary["material"] == "SiC"
+    summary["epi_carrier_cm3"] = np.nan
+    summary["substrate_carrier_cm3"] = np.nan
+    summary["carrier_identifiability_level"] = "not_run_v5"
+    summary["carrier_measurement_mode"] = "not_run_v5"
+    summary.loc[sic_mask, "carrier_identifiability_level"] = (
+        carrier_result.identifiability_level
+    )
+    summary.loc[sic_mask, "carrier_measurement_mode"] = (
+        carrier_result.measurement_mode
+    )
+    if carrier_result.reported_epi_carrier_cm3 is not None:
+        summary.loc[sic_mask, "epi_carrier_cm3"] = (
+            carrier_result.reported_epi_carrier_cm3
+        )
+    if carrier_result.reported_substrate_carrier_cm3 is not None:
+        summary.loc[sic_mask, "substrate_carrier_cm3"] = (
+            carrier_result.reported_substrate_carrier_cm3
+        )
+    for key, _, _ in sic_items:
+        details[key]["enhanced_carrier_inference"] = carrier_payload
 
     summary.to_csv(OUTPUT_DIR / "thickness_summary.csv", index=False, encoding="utf-8-sig")
     pd.DataFrame(sensitivity_rows).to_csv(
@@ -185,15 +218,27 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         json.dump(audits, handle, ensure_ascii=False, indent=2)
     with (OUTPUT_DIR / "fit_details.json").open("w", encoding="utf-8") as handle:
         json.dump(details, handle, ensure_ascii=False, indent=2)
+    dispersion_payload = {
+        material: result.to_dict() for material, result in joint_results.items()
+    }
+    refractive_frame = pd.DataFrame(refractive_rows)
     with (OUTPUT_DIR / "dispersion_fit.json").open("w", encoding="utf-8") as handle:
         json.dump(
-            {material: result.to_dict() for material, result in joint_results.items()},
+            dispersion_payload,
             handle,
             ensure_ascii=False,
             indent=2,
         )
-    pd.DataFrame(refractive_rows).to_csv(
+    refractive_frame.to_csv(
         OUTPUT_DIR / "refractive_index_curves.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    with (OUTPUT_DIR / "carrier_inference.json").open("w", encoding="utf-8") as handle:
+        json.dump(carrier_payload, handle, ensure_ascii=False, indent=2)
+    carrier_profile_frame = pd.DataFrame(carrier_profile_rows)
+    carrier_profile_frame.to_csv(
+        OUTPUT_DIR / "carrier_profile.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -216,13 +261,32 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
                 joint_results[material].systematic_low_um,
                 joint_results[material].systematic_high_um,
             ],
-            "carrier_concentration_identifiable": joint_results[
+            "dispersion_candidate_identifiable": joint_results[
                 material
             ].concentration_identifiable,
         }
+    consistency["SiC"]["enhanced_carrier_inference"] = {
+        "measurement_mode": carrier_result.measurement_mode,
+        "identifiability_level": carrier_result.identifiability_level,
+        "reported_epi_carrier_cm3": carrier_result.reported_epi_carrier_cm3,
+        "reported_substrate_carrier_cm3": (
+            carrier_result.reported_substrate_carrier_cm3
+        ),
+        "epi_ci90_cm3": carrier_result.epi_ci90_cm3,
+        "substrate_ci90_cm3": carrier_result.substrate_ci90_cm3,
+    }
     with (OUTPUT_DIR / "consistency.json").open("w", encoding="utf-8") as handle:
         json.dump(consistency, handle, ensure_ascii=False, indent=2)
-    plot_summary_figures(summary, consistency, OUTPUT_DIR)
+    plot_summary_figures(
+        summary,
+        consistency,
+        OUTPUT_DIR,
+        dispersion_results=dispersion_payload,
+        refractive_curves=refractive_frame,
+        carrier_result=carrier_payload,
+        carrier_profile=carrier_profile_frame,
+    )
+    plot_model_flowchart(OUTPUT_DIR / "model_flowchart.png")
 
     print(summary.to_string(index=False, float_format=lambda value: f"{value:.6g}"))
     print("\n双角度一致性：")

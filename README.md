@@ -106,7 +106,9 @@ python main.py --fast --bootstrap 10
 - `output/data_audit.json`：输入数据质量审计；
 - `output/fit_details.json`：拟合与诊断详细参数；
 - `output/dispersion_fit.json`：波长—载流子浓度联合校准、可辨识性和掺杂情景；
-- `output/refractive_index_curves.csv`：外延层与衬底的复折射率曲线。
+- `output/refractive_index_curves.csv`：外延层与衬底的复折射率曲线；
+- `output/carrier_inference.json`：SiC 增强反射率反演、仪器模式和条件浓度区间；
+- `output/carrier_profile.csv`：外延层/衬底浓度轮廓目标函数。
 
 主要图片：
 
@@ -114,7 +116,13 @@ python main.py --fast --bootstrap 10
 - `output/thickness_comparison.png`：厚度、模型差异和置信区间；
 - `output/angle_consistency.png`：双入射角一致性；
 - `output/multibeam_evidence.png`：多光束四项判据矩阵；
-- `output/model_quality.png`：双光束与 Airy 模型质量比较。
+- `output/model_quality.png`：双光束与 Airy 模型质量比较；
+- `output/dispersion_curves.png`：SiC/Si 外延层与衬底的 \(n,k\) 曲线；
+- `output/carrier_scenarios.png`：低、中、高掺杂情景的厚度及 RMSE；
+- `output/identifiability_diagnostics.png`：连续波段稳定性与参数门控；
+- `output/carrier_profile.png`：SiC 两层载流子浓度的条件轮廓区间；
+- `output/model_flowchart.png`：当前完整数学模型流程图；
+- `docs/model-flowchart.md`：可编辑 Mermaid 流程图及核心公式。
 
 ## 使用的主要方法
 

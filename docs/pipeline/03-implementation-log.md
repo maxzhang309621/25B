@@ -114,3 +114,61 @@ python main.py --bootstrap 100
 ### 版本控制
 
 本次未创建 Git 提交：用户要求完成实现但未明确授权提交，保留工作区变更供审阅。
+
+## v4 色散模型可视化与流程图实现（2026-08-27）
+
+### 完成内容
+
+- P1：更新 `thickness_comparison.png`，加入色散自由拟合、门控采用值、条件统计区间和掺杂系统范围；更新 `angle_consistency.png`，加入材料级色散采用值与系统范围。
+- P2：新增 `dispersion_curves.png`、`carrier_scenarios.png` 和 `identifiability_diagnostics.png`，分别展示外延层/衬底 \(n,k\)、三档掺杂情景及连续留段门控。
+- P3：新增 `src/model_flowchart.py` 生成高清数学模型流程图，并新增 `docs/model-flowchart.md` 保存可编辑 Mermaid 源图和核心公式。
+- P4：`main.py` 接入所有新图自动生成；README 补充输出说明；测试增加新图非空与宽度检查。
+
+### 实际运行
+
+```text
+python test_model.py
+Ran 15 tests in 5.017s
+OK
+
+python main.py --bootstrap 100
+退出码：0；全部新旧图像成功生成
+```
+
+新图尺寸：
+
+- `dispersion_curves.png`：2885×2010
+- `carrier_scenarios.png`：2885×1895
+- `identifiability_diagnostics.png`：2885×1895
+- `model_flowchart.png`：3765×2665
+
+本次只改变结果表达与流程图，不修改 v3 数值模型、参数门控或最终厚度。
+
+## v5 SiC 增强反射率与浓度区间实现（2026-08-27）
+
+### 完成内容
+
+- R1：新增 `instrument_response.py`，完成逐附件物理范围资格审查、SiC 浓度/厚度双通道权重及二声子区非零降权。
+- R2：实现两角度共享漂移、每角度有界增益/偏置的仪器响应，替代会吸收 Drude 谱形的独立交互基线。
+- R3：新增 `carrier_inference.py`，实现厚度 ±3% 锚定、多起点稳健双浓度拟合和固定情景比较。
+- R4：实现外延层/衬底 \(\log_{10}N\) 轮廓重优化、90% 条件区间、边界/相关性/改善量门控。
+- R5：主表将未通过门控的浓度点估计写为 `NaN`，候选值改名为 `candidate_*`；新增 `carrier_inference.json`、`carrier_profile.csv` 和 `carrier_profile.png`。
+- 更新流程图、README 与 `model.md`，明确候选浓度、条件区间和绝对测量的区别。
+
+### 冒烟与单元测试
+
+```text
+python test_model.py
+Ran 21 tests in 7.466s
+OK
+
+python main.py --fast --bootstrap 10
+退出码：0；增强反演及新输出成功生成
+```
+
+### 当前附件结果
+
+- 附件 2 有 3.51% 点超过 100%，SiC 进入 `relative_shape` 模式。
+- 内部候选约为 \(N_{\rm epi}=6.56\times10^{17}\)、\(N_{\rm sub}=2.07\times10^{18}\ \mathrm{cm^{-3}}\)。
+- 诊断性 90% 条件范围约为 \(N_{\rm epi}=[4.95,7.39]\times10^{17}\)，\(N_{\rm sub}=[3.00\times10^{17},2.07\times10^{18}]\ \mathrm{cm^{-3}}\)。
+- 衬底区间和厚度均触边，且相对固定情景改善仅约 2.76%；最终等级为 `bounded_scenario`，主表不输出浓度点估计。

@@ -445,6 +445,11 @@ def refractive_index_rows(
     return [
         {
             "material": material,
+            "parameter_status": (
+                "identified"
+                if result.concentration_identifiable
+                else "diagnostic_candidate"
+            ),
             "wavenumber_cm1": float(nu),
             "wavelength_um": float(1e4 / nu),
             "n_epi": float(epi_value.real),
