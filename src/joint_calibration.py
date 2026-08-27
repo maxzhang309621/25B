@@ -1,4 +1,9 @@
-"""双角度共享厚度与载流子参数的低维联合校准。"""
+"""双角度共享厚度与载流子参数的低维联合校准。
+
+主参数仅 3 个：共享厚度、log10(N_epi)、log10(N_sub)。
+每角度的线性增益/基线通过剖面最小二乘消元，不进入非线性参数。
+浓度不可辨识时回退固定掺杂情景或常折射率基线。
+"""
 
 from __future__ import annotations
 
@@ -21,6 +26,8 @@ from preprocess import ProcessedSpectrum
 
 @dataclass
 class ScenarioThickness:
+    """固定 (N_epi, N_sub) 情景下仅反演厚度的结果。"""
+
     name: str
     epi_carrier_cm3: float
     substrate_carrier_cm3: float
@@ -30,6 +37,8 @@ class ScenarioThickness:
 
 @dataclass
 class JointCalibrationResult:
+    """材料级联合校准结果，含可辨识性门控与系统/统计不确定度。"""
+
     material: str
     fitted_thickness_um: float
     adopted_thickness_um: float
@@ -129,6 +138,7 @@ def _objective_residual(
     stride: int,
     initial_thickness_um: float,
 ) -> np.ndarray:
+    """数据残差 + 弱对数先验正则，抑制无约束浓度漂移。"""
     data = _normalized_data_residual(params, spectra, material, stride)
     prior = CARRIER_PRIOR_LOG10[material]
     regularization = np.array(
@@ -171,6 +181,7 @@ def _identifiability(
     lower: np.ndarray,
     upper: np.ndarray,
 ) -> tuple[float, float, bool, bool]:
+    """Jacobian 条件数、参数相关与触边检查；三者同时通过才可辨识。"""
     jacobian = _finite_difference_jacobian(params, spectra, material, stride)
     singular = np.linalg.svd(jacobian, compute_uv=False)
     condition = float(singular[0] / max(singular[-1], 1e-15))
@@ -189,6 +200,7 @@ def _identifiability(
     boundary_hit = bool(
         np.any(params - lower <= tolerance) or np.any(upper - params <= tolerance)
     )
+    # 条件数过大 / 强相关 / 触边 → 浓度点估计不可信
     identifiable = bool(
         condition < 1e8 and max_correlation < 0.95 and not boundary_hit
     )
@@ -260,6 +272,7 @@ def _band_stability(
     thickness_um: float,
     thickness_bounds: tuple[float, float],
 ) -> tuple[list[float], float, float, bool]:
+    """连续三波段留出厚度；CV≤1% 且最大偏移≤2% 视为波段稳定。"""
     lo = max(float(s.wavenumber_cm1.min()) for s in spectra)
     hi = min(float(s.wavenumber_cm1.max()) for s in spectra)
     edges = np.linspace(lo, hi, 4)

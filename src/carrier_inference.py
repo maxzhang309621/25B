@@ -1,4 +1,15 @@
-"""增强反射率模型：受约束仪器响应与载流子浓度轮廓区间。"""
+"""增强反射率模型：受约束仪器响应与载流子浓度轮廓区间。
+
+参数向量布局（8 维）：
+  [0] 厚度 d (µm)，锚定在稳健厚度 ±3%
+  [1] log10(N_epi)
+  [2] log10(N_sub)
+  [3:5] 两角度增益
+  [5:7] 两角度偏置 (%)
+  [7] 共享斜率 (% / 归一化波数)
+
+主表仅在门控通过时写 reported_*；候选值始终保留供诊断。
+"""
 
 from __future__ import annotations
 
@@ -25,6 +36,8 @@ from preprocess import ProcessedSpectrum
 
 @dataclass
 class CarrierInferenceResult:
+    """SiC 增强浓度反演结果；reported_* 可为 None 表示拒绝点估计。"""
+
     material: str
     measurement_mode: str
     qualification: dict
@@ -55,6 +68,7 @@ class CarrierInferenceResult:
 
 
 def _noise_scale(spectrum: ProcessedSpectrum) -> float:
+    """稳健噪声尺度（MAD→σ），下限 0.15% 防止过拟合噪声。"""
     noise = spectrum.reflectance_pct - spectrum.smooth_pct
     centered = noise - np.median(noise)
     return max(0.15, float(1.4826 * np.median(np.abs(centered))))
@@ -63,6 +77,7 @@ def _noise_scale(spectrum: ProcessedSpectrum) -> float:
 def _bounds(
     material: str, initial_thickness_um: float
 ) -> tuple[np.ndarray, np.ndarray]:
+    """返回 8 维参数上下界；厚度收紧到初值 ±3% 以锚定厚度通道。"""
     carrier = CARRIER_BOUNDS_LOG10[material]
     lower = np.array(
         [
@@ -97,6 +112,7 @@ def _subsampled_residual(
     material: str,
     stride: int,
 ) -> np.ndarray:
+    """加权、按噪声归一化的残差；stride 降采样加速轮廓扫描。"""
     thickness, log_epi, log_sub = params[:3]
     gains = params[3:5]
     offsets = params[5:7]
@@ -134,6 +150,7 @@ def _fit_with_fixed(
     stride: int,
     max_nfev: int = 220,
 ):
+    """固定若干参数（轮廓似然），仅优化其余自由参数。"""
     free_indices = [index for index in range(len(start)) if index not in fixed]
     free_start = np.clip(
         start[free_indices],
@@ -170,6 +187,7 @@ def _full_fit(
     material: str,
     stride: int,
 ) -> tuple[object, np.ndarray, np.ndarray, np.ndarray]:
+    """多起点稳健最小二乘，降低局部最优风险。"""
     lower, upper = _bounds(material, initial_thickness_um)
     prior = CARRIER_PRIOR_LOG10[material]
     base_instrument = [1.0, 1.0, 0.0, 0.0, 0.0]
@@ -235,6 +253,11 @@ def _profile_parameter(
     stride: int,
     grid_points: int,
 ) -> tuple[tuple[float, float] | None, bool, list[dict], np.ndarray]:
+    """对单个 log10(N) 做轮廓扫描，构造 90% 条件区间。
+
+    Δχ² ≤ 2.706 对应 1 自由度约 90% 轮廓阈值；
+    若接受区触到网格端点，标记为边界命中（区间单侧/无界）。
+    """
     grid = np.linspace(lower[target_index], upper[target_index], grid_points)
     costs = []
     starts = best_params.copy()
@@ -252,10 +275,10 @@ def _profile_parameter(
         )
         costs.append(float(2.0 * fit.cost))
         fitted_params.append(params)
-        starts = params
+        starts = params  # 暖启动，加速相邻网格点
     costs_array = np.asarray(costs)
     delta = costs_array - float(np.min(costs_array))
-    accepted = delta <= 2.706
+    accepted = delta <= 2.706  # 约 90% 轮廓阈值
     best_profile_params = fitted_params[int(np.argmin(costs_array))]
     if not np.any(accepted):
         return None, True, [], best_profile_params

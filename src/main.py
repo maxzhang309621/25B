@@ -1,4 +1,8 @@
-"""2025 B 题端到端求解入口。"""
+"""2025 B 题端到端求解入口。
+
+主流程：读附件 → 选波段/预处理 → 双光束 → 多光束诊断 →
+材料级色散联合校准 → SiC 增强浓度反演 → 导出表图与原始证据图。
+"""
 
 import argparse
 import importlib.util
@@ -27,6 +31,7 @@ from raw_evidence_plotting import (
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
 
+# Candidate window 目录含空格，用动态导入避免包路径问题。
 _BAND_SELECT_PATH = Path(__file__).resolve().parent / "Candidate window" / "band_select.py"
 _band_spec = importlib.util.spec_from_file_location("band_select", _BAND_SELECT_PATH)
 _band_select = importlib.util.module_from_spec(_band_spec)
@@ -38,6 +43,7 @@ build_sensitivity_rows = _band_select.build_sensitivity_rows
 
 
 def _plain_dict(obj) -> dict:
+    """dataclass → JSON 友好 dict，跳过 ndarray 大数组。"""
     result = {}
     for key, value in asdict(obj).items():
         if isinstance(value, np.ndarray):
@@ -49,13 +55,14 @@ def _plain_dict(obj) -> dict:
 
 
 def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.DataFrame:
+    """完整求解四附件并写 output/；返回 thickness_summary 表。"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rows = []
     audits = {}
     details = {}
     sensitivity_rows = []
     material_inputs = {"SiC": [], "Si": []}
-    multibeam_plot_inputs = []
+    multibeam_plot_inputs = []  # 供独立谐波频谱原始图复用
 
     for index, spec in enumerate(DATASETS):
         spectrum = load_spectrum(DATA_DIR, spec)
@@ -72,8 +79,10 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             block_cm1=BOOTSTRAP_BLOCK_CM1,
             seed=2025 + index,
         )
+        # 四项证据全部通过才采用多光束厚度，否则回退双光束。
         selected = multi.thickness_um if diagnostic.observable_multibeam else two.thickness_refined_um
         selected_model = "multi-beam" if diagnostic.observable_multibeam else "two-beam"
+        # 色散校准使用材料有效波段（可比条纹选带更宽）。
         calibration_spectrum = preprocess(
             spectrum, fit_band_cm1=METADATA[spec.material].valid_wavenumber_cm1
         )
@@ -129,6 +138,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         )
 
     summary = pd.DataFrame(rows)
+    # —— 材料级色散联合校准（SiC / Si 各一对入射角）——
     joint_results = {}
     refractive_rows = []
     for material, items in material_inputs.items():
@@ -185,6 +195,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             refractive_index_rows(material, joint, np.linspace(lo, hi, 300))
         )
 
+    # —— SiC 增强浓度反演：门控未通过时主表浓度保持 NaN ——
     sic_items = material_inputs["SiC"]
     carrier_result, carrier_profile_rows = infer_carrier_concentrations(
         [item[1] for item in sic_items],
@@ -292,6 +303,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         carrier_result=carrier_payload,
         carrier_profile=carrier_profile_frame,
     )
+    # 独立原始证据图：仅标题/坐标/图例，不含判定与结论文字。
     plot_raw_multibeam_evidence(
         summary,
         multibeam_plot_inputs,

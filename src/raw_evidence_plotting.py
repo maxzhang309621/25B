@@ -1,4 +1,9 @@
-"""导出可直接用于论文排版的单指标原始数据图。"""
+"""导出可直接用于论文排版的单指标原始数据图。
+
+约定：单指标/单物理量单图；仅保留标题、坐标轴、单位与必要图例；
+禁止 PASS/FAIL、阈值结论、回退原因与分析段落。
+输出目录：output/raw_evidence/{multibeam,dispersion}/
+"""
 
 from pathlib import Path
 
@@ -23,6 +28,7 @@ COLORS = {
 
 
 def _style() -> None:
+    """统一中文字体与可读字号。"""
     try:
         plt.style.use("tableau-colorblind10")
     except OSError:
@@ -51,6 +57,7 @@ def _save(fig: plt.Figure, path: Path) -> None:
 
 
 def _external_legend(ax: plt.Axes) -> None:
+    """图例外置，避免遮挡数据线。"""
     ax.legend(
         loc="upper left",
         bbox_to_anchor=(1.01, 1.0),

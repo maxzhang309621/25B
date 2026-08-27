@@ -1,4 +1,8 @@
-"""双光束条纹的周期、极值和全谱厚度估计。"""
+"""双光束条纹的周期、极值和全谱厚度估计。
+
+流程：FFT 粗估 → 峰/谷间距 Theil–Sen → 相位模型精修。
+thickness_refined_um 是后续多光束初值与谐波诊断的厚度锚点。
+"""
 
 from dataclasses import dataclass
 
@@ -13,6 +17,8 @@ from preprocess import ProcessedSpectrum
 
 @dataclass
 class TwoBeamResult:
+    """双光束厚度估计与拟合质量指标。"""
+
     thickness_fft_um: float
     thickness_peaks_um: float
     thickness_valleys_um: float
@@ -27,6 +33,7 @@ class TwoBeamResult:
 
 
 def _fft_thickness(processed: ProcessedSpectrum, n: float, angle_deg: float) -> float:
+    """由残差条纹功率谱主峰对应频率换算厚度初值。"""
     x, residual = processed.wavenumber_cm1, processed.residual_pct
     window = np.hanning(len(residual))
     power = np.abs(np.fft.rfft((residual - residual.mean()) * window)) ** 2
@@ -44,6 +51,7 @@ def _extrema(
     approximate_period_cm1: float,
     sign: float,
 ) -> np.ndarray:
+    """按预期周期与显著性寻找峰(+1)或谷(-1)索引，并裁掉边缘。"""
     residual = sign * processed.residual_pct
     distance = max(3, int(0.55 * approximate_period_cm1 / processed.spacing_cm1))
     prominence = max(0.03, 0.12 * float(np.std(residual)))
@@ -53,6 +61,7 @@ def _extrema(
 
 
 def _spacing_from_indices(x: np.ndarray, indices: np.ndarray) -> float:
+    """极值序号对波数的 Theil–Sen 斜率 ≈ 相邻同类极值间距。"""
     if len(indices) < 3:
         return float("nan")
     order = np.arange(len(indices), dtype=float)

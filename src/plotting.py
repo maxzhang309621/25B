@@ -1,4 +1,8 @@
-"""论文级单附件诊断图与跨附件证据汇总图。"""
+"""论文级单附件诊断图与跨附件证据汇总图。
+
+综合图可含 PASS/FAIL、采用依据等分析文字；
+论文引用的无分析原始数据图见 raw_evidence_plotting。
+"""
 
 from pathlib import Path
 
@@ -29,6 +33,7 @@ COLORS = {
     "pass": "#0072B2",
     "fail": "#999999",
 }
+# 与 diagnostics.diagnose_multibeam 硬编码阈值保持一致。
 THRESHOLDS = {
     "harmonic_ratio": 0.08,
     "effective_reflectivity": 0.12,

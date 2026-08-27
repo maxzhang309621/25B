@@ -1,4 +1,9 @@
-"""斜入射薄膜干涉的物理公式。"""
+"""斜入射薄膜干涉的物理公式。
+
+含两类模型：
+1) 常折射率双光束/Airy（条纹相位与有效反射率）；
+2) 复介电空气—外延层—衬底 Fresnel–Airy（色散联合校准用）。
+"""
 
 from __future__ import annotations
 
@@ -85,7 +90,11 @@ def thin_film_reflectance(
     epsilon_film: np.ndarray,
     epsilon_substrate: np.ndarray,
 ) -> np.ndarray:
-    """空气/外延层/半无限衬底的非偏振单层 Fresnel--Airy 反射率。"""
+    """空气/外延层/半无限衬底的非偏振单层 Fresnel--Airy 反射率。
+
+    先算 s/p 界面振幅反射系数，再叠加层内往返相位因子 exp(2iβ)。
+    返回值落在 [0,1]，为物理反射率（非百分数）。
+    """
     x = np.asarray(wavenumber_cm1, dtype=float)
     eps1 = np.asarray(epsilon_film, dtype=complex)
     eps2 = np.asarray(epsilon_substrate, dtype=complex)
@@ -105,6 +114,7 @@ def thin_film_reflectance(
     q1 = _normal_wavevector(eps1, sin0)
     q2 = _normal_wavevector(eps2, sin0)
 
+    # 0=空气, 1=外延层, 2=衬底
     r01_s = (q0 - q1) / (q0 + q1)
     r12_s = (q1 - q2) / (q1 + q2)
     r01_p = (eps0 * q1 - eps1 * q0) / (eps0 * q1 + eps1 * q0)

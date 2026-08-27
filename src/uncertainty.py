@@ -1,4 +1,7 @@
-"""厚度重采样区间和双角度一致性指标。"""
+"""厚度重采样区间和双角度一致性指标。
+
+优先对峰/谷间距做 bootstrap；极值不足时回退残差区块重采样。
+"""
 
 from dataclasses import dataclass, replace
 
@@ -11,6 +14,8 @@ from two_beam import TwoBeamResult, estimate_two_beam
 
 @dataclass
 class UncertaintyResult:
+    """双光束厚度的条件统计不确定度（不含掺杂系统误差）。"""
+
     samples_um: np.ndarray
     mean_um: float
     std_um: float
@@ -19,6 +24,7 @@ class UncertaintyResult:
 
 
 def _moving_block_sample(errors: np.ndarray, block_points: int, rng) -> np.ndarray:
+    """移动区块重采样，保留残差局部相关结构。"""
     n = len(errors)
     block_points = max(2, min(block_points, n))
     starts = rng.integers(0, n - block_points + 1, size=int(np.ceil(n / block_points)))
@@ -33,6 +39,7 @@ def bootstrap_two_beam(
     block_cm1: float = 80.0,
     seed: int = 2025,
 ) -> UncertaintyResult:
+    """估计双光束厚度的 95% 重采样区间。"""
     rng = np.random.default_rng(seed)
     x = processed.wavenumber_cm1
     interval_groups = [

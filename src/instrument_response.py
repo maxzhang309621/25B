@@ -1,4 +1,8 @@
-"""反射率数据资格审查与受约束仪器响应。"""
+"""反射率数据资格审查与受约束仪器响应。
+
+绝对标定不足（如反射率 >100%）时，只能解释相对谱形；
+仪器模型故意限制自由度，避免增益/漂移吞掉 Drude 浓度特征。
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,9 @@ from preprocess import ProcessedSpectrum
 
 @dataclass
 class ReflectanceQualification:
-    mode: str
+    """附件反射率是否允许绝对浓度解释的审计结果。"""
+
+    mode: str  # "absolute" 或 "relative_shape"
     out_of_range_fraction: float
     minimum_pct: float
     maximum_pct: float
@@ -61,7 +67,11 @@ def qualify_reflectance(
 
 
 def carrier_spectral_weights(material: str, wavenumber_cm1: np.ndarray) -> np.ndarray:
-    """厚度/浓度双通道权重；二声子区降权但不删除。"""
+    """厚度/浓度双通道权重；二声子区降权但不删除。
+
+    SiC：700–1200 cm⁻¹（声子—等离子体）加权突出浓度信息；
+    1300–1600 cm⁻¹ 二声子区简化模型不足，降权而非硬删点。
+    """
     x = np.asarray(wavenumber_cm1, dtype=float)
     if np.any(~np.isfinite(x)) or np.any(x <= 0):
         raise ValueError("波数必须为有限正数")
@@ -83,7 +93,10 @@ def instrument_prediction(
     offset_pct: float,
     shared_slope_pct: float,
 ) -> np.ndarray:
-    """有界参数对应的仪器响应：角度增益/偏置 + 两角度共享漂移。"""
+    """有界仪器响应：R_obs = offset + 100·gain·R_phys + slope·z(ν)。
+
+    gain/offset 按角度独立；slope 两角度共享，抑制慢变漂移吞噬 Drude 形状。
+    """
     physical = np.asarray(physical_reflectance, dtype=float)
     x = np.asarray(wavenumber_cm1, dtype=float)
     if physical.shape != x.shape:

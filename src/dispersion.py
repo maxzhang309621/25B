@@ -1,4 +1,8 @@
-"""Si 与 4H-SiC 的波长—载流子浓度耦合复介电模型。"""
+"""Si 与 4H-SiC 的波长—载流子浓度耦合复介电模型。
+
+本模块只给出物理先验：本征色散、声子振子、Drude 自由载流子项。
+浓度不在此拟合，由 joint_calibration / carrier_inference 在边界内反演。
+"""
 
 from __future__ import annotations
 
@@ -7,14 +11,17 @@ from dataclasses import dataclass
 import numpy as np
 
 
+# SI 单位物理常数；波数以 cm^-1 输入，内部换算为角频率 (rad/s)。
 EPSILON_0 = 8.8541878128e-12
 E_CHARGE = 1.602176634e-19
 M_ELECTRON = 9.1093837015e-31
-C_CM_S = 2.99792458e10
+C_CM_S = 2.99792458e10  # 真空光速，cm/s
 
 
 @dataclass(frozen=True)
 class DispersionMetadata:
+    """材料色散模型的适用范围与文献假设，供输出审计。"""
+
     model: str
     valid_wavenumber_cm1: tuple[float, float]
     references: tuple[str, ...]
@@ -51,6 +58,7 @@ METADATA = {
 }
 
 
+# 拟合边界 / 先验 / 固定情景均用 log10(N)，避免跨数量级数值病态。
 CARRIER_BOUNDS_LOG10 = {
     "Si": {"epi": (14.0, 19.0), "substrate": (15.0, np.log10(3e19))},
     "SiC": {
@@ -66,6 +74,7 @@ CARRIER_PRIOR_LOG10 = {
 }
 
 
+# 每个情景为 (外延层浓度, 衬底浓度)，用于系统误差与不可辨识时回退。
 CARRIER_SCENARIOS_CM3 = {
     "Si": {
         "low": (1e14, 1e15),
@@ -126,6 +135,11 @@ def _drude_term(
     mobility_cm2_vs: float,
     mass_for_mobility_m0: float | None = None,
 ) -> np.ndarray:
+    """经典 Drude 介电项：-ω_p² / (ω² + iγω)。
+
+    密度有效质量进入等离子体频率；迁移率有效质量进入阻尼 γ。
+    4H-SiC 文献中两者可不相同，故分开展开。
+    """
     if carrier_cm3 == 0:
         return np.zeros_like(wavenumber_cm1, dtype=complex)
     omega = 2.0 * np.pi * C_CM_S * wavenumber_cm1
@@ -148,13 +162,17 @@ def epsilon_si(wavenumber_cm1: np.ndarray, carrier_cm3: float) -> np.ndarray:
 
 
 def epsilon_4h_sic(wavenumber_cm1: np.ndarray, carrier_cm3: float) -> np.ndarray:
-    """4H-SiC 单振子晶格项与自由载流子项。"""
+    """4H-SiC 单振子晶格项与自由载流子项。
+
+    TO≈798、LO≈970 cm⁻¹ 为文献固定先验，不作为当前附件的自由拟合参数。
+    """
     nu = _validate_inputs(wavenumber_cm1, carrier_cm3)
     scale = 2.0 * np.pi * C_CM_S
     omega = scale * nu
     omega_to = scale * 798.0
     omega_lo = scale * 970.0
     gamma_ph = scale * 3.24
+    # 单振子形式：ε_∞ (ω_LO²-ω²-iγω)/(ω_TO²-ω²-iγω)
     lattice = 6.56 * (
         omega_lo**2 - omega**2 - 1j * gamma_ph * omega
     ) / (omega_to**2 - omega**2 - 1j * gamma_ph * omega)
@@ -180,6 +198,7 @@ def passive_complex_sqrt(values: np.ndarray) -> np.ndarray:
 def material_epsilon(
     material: str, wavenumber_cm1: np.ndarray, carrier_cm3: float
 ) -> np.ndarray:
+    """按材料分发复介电函数 ε(ν, N)。"""
     if material == "Si":
         return epsilon_si(wavenumber_cm1, carrier_cm3)
     if material == "SiC":
@@ -190,6 +209,7 @@ def material_epsilon(
 def material_refractive_index(
     material: str, wavenumber_cm1: np.ndarray, carrier_cm3: float
 ) -> np.ndarray:
+    """复折射率 n+ik = √ε，强制被动分支。"""
     return passive_complex_sqrt(
         material_epsilon(material, wavenumber_cm1, carrier_cm3)
     )

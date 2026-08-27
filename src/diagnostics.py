@@ -1,4 +1,8 @@
-"""双光束与多光束模型的证据合并诊断。"""
+"""双光束与多光束模型的证据合并诊断。
+
+四项证据须同时通过才判定为可观测多光束：
+谐波比≥0.08、有效反射率≥0.12、RMSE 改善≥2%、ΔAICc≥10。
+"""
 
 from dataclasses import dataclass
 
@@ -12,6 +16,8 @@ from two_beam import TwoBeamResult
 
 @dataclass
 class MultiBeamDiagnostic:
+    """多光束可观测性诊断结果。"""
+
     harmonic_ratio: float
     delta_aicc: float
     rmse_improvement_pct: float
@@ -24,6 +30,7 @@ class MultiBeamDiagnostic:
 def _local_fft_amplitude(
     frequency: np.ndarray, spectrum: np.ndarray, target: float
 ) -> float:
+    """在目标频率邻域取最大幅值，抑制栅栏效应。"""
     if target <= 0:
         return 0.0
     half_width = max(target * 0.08, frequency[1] - frequency[0])
@@ -35,7 +42,11 @@ def harmonic_spectrum(
     processed: ProcessedSpectrum,
     thickness_um: float,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """返回归一化幅频谱、基频及二次谐波比，供诊断与绘图共用。"""
+    """返回归一化幅频谱、基频及二次谐波比，供诊断与绘图共用。
+
+    基频由光学厚度 f₁ = 2 n cosθ · d · 10⁻⁴ 预测；
+    谐波比 = A(2f₁)/A(f₁)。
+    """
     spec = processed.source.spec
     ncos = spec.refractive_index * float(
         refracted_cosine(spec.refractive_index, spec.angle_deg)
@@ -58,6 +69,7 @@ def diagnose_multibeam(
     two: TwoBeamResult,
     multi: MultiBeamResult,
 ) -> MultiBeamDiagnostic:
+    """合并谐波、模型改善与有效反射率四项证据。"""
     _, _, _, harmonic_ratio = harmonic_spectrum(
         processed, two.thickness_refined_um
     )

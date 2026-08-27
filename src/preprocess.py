@@ -1,4 +1,8 @@
-"""光谱平滑、基线分离和分析波段截取。"""
+"""光谱平滑、基线分离和分析波段截取。
+
+短窗 Savitzky–Golay 去噪声，长窗提取慢变基线；
+residual = smooth - baseline 供双/多光束条纹拟合。
+"""
 
 from __future__ import annotations
 
@@ -13,16 +17,19 @@ from data_io import Spectrum
 
 @dataclass
 class ProcessedSpectrum:
+    """拟合波段内的预处理光谱。"""
+
     wavenumber_cm1: np.ndarray
-    reflectance_pct: np.ndarray
+    reflectance_pct: np.ndarray  # 原始截取反射率 (%)
     smooth_pct: np.ndarray
     baseline_pct: np.ndarray
-    residual_pct: np.ndarray
+    residual_pct: np.ndarray  # 去基线条纹信号
     spacing_cm1: float
     source: Spectrum
 
 
 def _odd_window(width_cm1: float, spacing_cm1: float, n: int, polyorder: int) -> int:
+    """将波数宽度转为奇数点数窗口，并夹到合法范围。"""
     value = max(polyorder + 2, int(round(width_cm1 / spacing_cm1)))
     if value % 2 == 0:
         value += 1
@@ -36,6 +43,7 @@ def preprocess(
     baseline_window_cm1: float = BASELINE_WINDOW_CM1,
     fit_band_cm1: tuple[float, float] | None = None,
 ) -> ProcessedSpectrum:
+    """按指定波段截取并分解为平滑谱、基线与残差条纹。"""
     lo, hi = fit_band_cm1 if fit_band_cm1 is not None else spectrum.spec.fit_band_cm1
     mask = (spectrum.wavenumber_cm1 >= lo) & (spectrum.wavenumber_cm1 <= hi)
     x = spectrum.wavenumber_cm1[mask]
