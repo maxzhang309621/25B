@@ -8,8 +8,8 @@
     ]
   },
   "Si": {
-    "angle_relative_difference_pct": 0.3794456155066567,
-    "weighted_combined_thickness_um": 3.5933735190617266,
+    "angle_relative_difference_pct": 0.3794470659290821,
+    "weighted_combined_thickness_um": 3.593373506898214,
     "selected_models": [
       "multi-beam",
       "multi-beam"

@@ -1,6 +1,6 @@
 {
   "sic_10": {
-    "source": "E:\\课程\\数模\\模拟测试\\第三次模拟\\第三轮模拟题目\\第三轮模拟题目\\B题\\solution\\dev\\25B\\data\\附件1.xlsx",
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件1.xlsx",
     "rows_in_file": 7469,
     "valid_points": 7468,
     "nonfinite_rows": 0,
@@ -13,7 +13,7 @@
     "reflectance_max_pct": 95.38499492
   },
   "sic_15": {
-    "source": "E:\\课程\\数模\\模拟测试\\第三次模拟\\第三轮模拟题目\\第三轮模拟题目\\B题\\solution\\dev\\25B\\data\\附件2.xlsx",
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件2.xlsx",
     "rows_in_file": 7469,
     "valid_points": 7468,
     "nonfinite_rows": 0,
@@ -26,7 +26,7 @@
     "reflectance_max_pct": 102.7393552
   },
   "si_10": {
-    "source": "E:\\课程\\数模\\模拟测试\\第三次模拟\\第三轮模拟题目\\第三轮模拟题目\\B题\\solution\\dev\\25B\\data\\附件3.xlsx",
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件3.xlsx",
     "rows_in_file": 7469,
     "valid_points": 7468,
     "nonfinite_rows": 0,
@@ -39,7 +39,7 @@
     "reflectance_max_pct": 79.8019744
   },
   "si_15": {
-    "source": "E:\\课程\\数模\\模拟测试\\第三次模拟\\第三轮模拟题目\\第三轮模拟题目\\B题\\solution\\dev\\25B\\data\\附件4.xlsx",
+    "source": "D:\\maxzhang\\python files\\Math-modeling\\25B\\data\\附件4.xlsx",
     "rows_in_file": 7469,
     "valid_points": 7468,
     "nonfinite_rows": 0,
