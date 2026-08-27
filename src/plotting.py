@@ -287,12 +287,12 @@ def plot_spectrum_fit(
 
 
 def plot_thickness_comparison(summary: pd.DataFrame, path: Path) -> None:
-    """绘制四附件模型厚度、最终值及置信区间。"""
+    """比较分角度模型与材料级色散联合结果。"""
     _apply_style()
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5.5), layout="constrained")
+    has_dispersion = "dispersion_adopted_thickness_um" in summary.columns
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.8), layout="constrained")
     for ax, material in zip(axes, ("SiC", "Si")):
         subset = summary[summary["material"] == material].sort_values("angle_deg")
-        labels = subset["dataset"].tolist()
         x = np.arange(len(subset))
         selected = subset["selected_thickness_um"].to_numpy(float)
         low = subset["bootstrap_ci95_low_um"].to_numpy(float)
@@ -336,11 +336,67 @@ def plot_thickness_comparison(summary: pd.DataFrame, path: Path) -> None:
                 ha="center",
                 fontsize=8,
             )
+        labels = [f"{angle:g}°" for angle in subset["angle_deg"]]
+        if has_dispersion:
+            joint_x = len(subset) + 0.25
+            first = subset.iloc[0]
+            adopted = float(first["dispersion_adopted_thickness_um"])
+            fitted = float(first["dispersion_fitted_thickness_um"])
+            stat_low = float(first["dispersion_stat_ci95_low_um"])
+            stat_high = float(first["dispersion_stat_ci95_high_um"])
+            system_low = float(first["dispersion_systematic_low_um"])
+            system_high = float(first["dispersion_systematic_high_um"])
+            ax.errorbar(
+                [joint_x],
+                [adopted],
+                yerr=[[adopted - stat_low], [stat_high - adopted]],
+                fmt="P",
+                ms=9,
+                color=COLORS["baseline"],
+                ecolor=COLORS["baseline"],
+                capsize=5,
+                label="色散门控采用值及条件统计区间",
+            )
+            ax.errorbar(
+                [joint_x],
+                [adopted],
+                yerr=[[adopted - system_low], [system_high - adopted]],
+                fmt="none",
+                ecolor=COLORS["fail"],
+                elinewidth=7,
+                alpha=0.28,
+                capsize=7,
+                label="掺杂情景系统范围",
+            )
+            ax.scatter(
+                [joint_x],
+                [fitted],
+                marker="x",
+                s=70,
+                linewidths=2,
+                color=COLORS["peak"],
+                label="自由浓度拟合值",
+                zorder=5,
+            )
+            ax.annotate(
+                f"采用 {adopted:.3f}\n自由拟合 {fitted:.3f}",
+                (joint_x, adopted),
+                xytext=(0, 14),
+                textcoords="offset points",
+                ha="center",
+                fontsize=8,
+            )
+            x = np.r_[x, joint_x]
+            labels.append("色散联合")
         ax.set_xticks(x, labels)
         ax.set(title=material, ylabel="外延层厚度 (µm)")
         ax.legend(loc="best")
         ax.grid(True, axis="y")
-    fig.suptitle("四附件厚度结果、模型差异与不确定度", fontsize=14, fontweight="bold")
+    fig.suptitle(
+        "常折射率模型、色散联合反演与两类不确定度",
+        fontsize=14,
+        fontweight="bold",
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=220, bbox_inches="tight")
     plt.close(fig)
@@ -360,6 +416,22 @@ def plot_angle_consistency(
         combined = info["weighted_combined_thickness_um"]
         ax.plot(angles, values, "o-", color=COLORS["selected"], ms=7, label="分角度最终厚度")
         ax.axhline(combined, color=COLORS["baseline"], ls="--", label=f"加权联合={combined:.3f} µm")
+        if "dispersion_adopted_thickness_um" in info:
+            dispersion = float(info["dispersion_adopted_thickness_um"])
+            system_low, system_high = info["dispersion_systematic_interval_um"]
+            ax.axhspan(
+                system_low,
+                system_high,
+                color=COLORS["fail"],
+                alpha=0.14,
+                label="掺杂情景系统范围",
+            )
+            ax.axhline(
+                dispersion,
+                color=COLORS["peak"],
+                ls="-.",
+                label=f"色散门控采用={dispersion:.3f} µm",
+            )
         for angle, value in zip(angles, values):
             ax.annotate(f"{value:.3f}", (angle, value), xytext=(0, 8), textcoords="offset points", ha="center")
         ax.text(
@@ -452,10 +524,281 @@ def plot_model_quality(summary: pd.DataFrame, path: Path) -> None:
     plt.close(fig)
 
 
+def plot_dispersion_curves(curves: pd.DataFrame, path: Path) -> None:
+    """绘制外延层与衬底的复折射率曲线。"""
+    _apply_style()
+    required = {
+        "material",
+        "wavenumber_cm1",
+        "n_epi",
+        "k_epi",
+        "n_substrate",
+        "k_substrate",
+    }
+    if curves.empty or not required.issubset(curves.columns):
+        raise ValueError("折射率曲线数据缺少必要列")
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9), layout="constrained")
+    for row, material in enumerate(("SiC", "Si")):
+        subset = curves[curves["material"] == material].sort_values("wavenumber_cm1")
+        x = subset["wavenumber_cm1"].to_numpy(float)
+        for column, component in enumerate(("n", "k")):
+            ax = axes[row, column]
+            ax.plot(
+                x,
+                subset[f"{component}_epi"],
+                color=COLORS["two"],
+                label="外延层",
+            )
+            ax.plot(
+                x,
+                subset[f"{component}_substrate"],
+                color=COLORS["multi"],
+                ls="--",
+                label="衬底",
+            )
+            if material == "SiC":
+                ax.axvspan(
+                    797,
+                    1000,
+                    color=COLORS["peak"],
+                    alpha=0.12,
+                    label="强声子带" if column == 0 else None,
+                )
+                ax.axvspan(
+                    1300,
+                    1600,
+                    color=COLORS["fail"],
+                    alpha=0.12,
+                    label="二声子排除区" if column == 0 else None,
+                )
+            ax.set(
+                title=f"{material}：{'实部 n' if component == 'n' else '消光系数 k'}",
+                xlabel=r"波数 (cm$^{-1}$)",
+                ylabel=component,
+            )
+            ax.grid(True)
+            ax.legend(loc="best")
+            _panel_label(ax, f"({chr(97 + row * 2 + column)})")
+    fig.suptitle(
+        "波长—载流子浓度耦合的外延层/衬底复折射率",
+        fontsize=14,
+        fontweight="bold",
+    )
+    fig.text(
+        0.5,
+        0.005,
+        "来源：dispersion_fit.json 与 refractive_index_curves.csv；曲线为当前先验/情景参数",
+        ha="center",
+        fontsize=8,
+    )
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_carrier_scenarios(results: dict, path: Path) -> None:
+    """比较低/中/高掺杂情景的厚度与拟合误差。"""
+    _apply_style()
+    fig, axes = plt.subplots(2, 2, figsize=(13, 8.5), layout="constrained")
+    for row, material in enumerate(("SiC", "Si")):
+        result = results[material]
+        scenarios = result["scenarios"]
+        labels = [item["name"] for item in scenarios]
+        thickness = np.array([item["thickness_um"] for item in scenarios])
+        rmse = np.array([item["rmse_pct"] for item in scenarios])
+        positions = np.arange(len(labels))
+
+        ax = axes[row, 0]
+        ax.plot(
+            positions,
+            thickness,
+            "o-",
+            color=COLORS["two"],
+            ms=7,
+            label="固定掺杂情景厚度",
+        )
+        ax.axhline(
+            result["adopted_thickness_um"],
+            color=COLORS["selected"],
+            ls="--",
+            label=f"门控采用={result['adopted_thickness_um']:.3f} µm",
+        )
+        for position, item in zip(positions, scenarios):
+            ax.annotate(
+                (
+                    f"{item['thickness_um']:.3f}\n"
+                    f"$N_e$={item['epi_carrier_cm3']:.1e}\n"
+                    f"$N_s$={item['substrate_carrier_cm3']:.1e}"
+                ),
+                (position, item["thickness_um"]),
+                xytext=(0, 9),
+                textcoords="offset points",
+                ha="center",
+                fontsize=7,
+            )
+        span = max(float(np.ptp(thickness)), 0.08 * float(np.mean(thickness)))
+        ax.set_ylim(float(np.min(thickness) - 0.16 * span), float(np.max(thickness) + 0.32 * span))
+        ax.set_xticks(positions, labels)
+        ax.set(title=f"{material}：掺杂情景厚度", ylabel="厚度 (µm)")
+        ax.grid(True, axis="y")
+        ax.legend(loc="best")
+
+        ax = axes[row, 1]
+        bars = ax.bar(positions, rmse, color=COLORS["multi"], alpha=0.8)
+        ax.bar_label(bars, labels=[f"{value:.2f}%" for value in rmse], padding=3)
+        ax.axhline(
+            result["rmse_pct"],
+            color=COLORS["peak"],
+            ls="--",
+            label=f"自由拟合 RMSE={result['rmse_pct']:.2f}%",
+        )
+        ax.set_xticks(positions, labels)
+        ax.set(title=f"{material}：情景拟合质量", ylabel="RMSE (%)")
+        ax.grid(True, axis="y")
+        ax.legend(loc="best")
+    fig.suptitle(
+        "载流子浓度情景对厚度与拟合质量的影响",
+        fontsize=14,
+        fontweight="bold",
+    )
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_identifiability_diagnostics(results: dict, path: Path) -> None:
+    """显示连续留段稳定性、参数门控及最终回退路径。"""
+    _apply_style()
+    fig, axes = plt.subplots(2, 2, figsize=(13, 8.5), layout="constrained")
+    for row, material in enumerate(("SiC", "Si")):
+        result = results[material]
+        bands = np.asarray(result["band_thicknesses_um"], dtype=float)
+        positions = np.arange(1, len(bands) + 1)
+        ax = axes[row, 0]
+        ax.plot(positions, bands, "o-", color=COLORS["two"], ms=7)
+        ax.axhline(
+            result["adopted_thickness_um"],
+            color=COLORS["selected"],
+            ls="--",
+            label=f"最终采用={result['adopted_thickness_um']:.3f} µm",
+        )
+        ax.set_xticks(positions, [f"连续波段 {value}" for value in positions])
+        ax.set(title=f"{material}：连续留段厚度", ylabel="厚度 (µm)")
+        ax.grid(True)
+        ax.legend(loc="best")
+
+        normalized = np.array(
+            [
+                result["band_cv_pct"] / 1.0,
+                result["max_band_shift_pct"] / 2.0,
+            ]
+        )
+        metric_labels = ["厚度 CV / 1%", "最大偏移 / 2%"]
+        ax = axes[row, 1]
+        colors = [
+            COLORS["pass"] if value <= 1.0 else COLORS["fail"]
+            for value in normalized
+        ]
+        bars = ax.barh(np.arange(2), normalized, color=colors)
+        ax.axvline(1.0, color="black", ls="--", label="门控阈值")
+        ax.bar_label(bars, labels=[f"{value:.2f}×" for value in normalized], padding=3)
+        ax.set_yticks(np.arange(2), metric_labels)
+        ax.invert_yaxis()
+        ax.set_xlim(0, max(1.0, float(np.max(normalized))) * 1.6)
+        ax.set(
+            title=f"{material}：可辨识性门控",
+            xlabel="指标值 / 阈值（≤1 通过）",
+        )
+        status = "可辨识" if result["concentration_identifiable"] else "不可唯一辨识"
+        ax.text(
+            0.98,
+            0.50,
+            (
+                f"浓度：{status}\n"
+                f"边界命中：{'是' if result['boundary_hit'] else '否'}\n"
+                f"采用依据：{result['adopted_basis']}"
+            ),
+            transform=ax.transAxes,
+            ha="right",
+            va="center",
+            fontsize=8,
+            bbox={"boxstyle": "round", "fc": "white", "alpha": 0.9},
+        )
+        ax.legend(loc="best")
+        ax.grid(True, axis="x")
+    fig.suptitle(
+        "色散反演的连续波段稳定性与参数可辨识性",
+        fontsize=14,
+        fontweight="bold",
+    )
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_carrier_profiles(
+    profile: pd.DataFrame, result: dict, path: Path
+) -> None:
+    """绘制 SiC 两层浓度的 90% 条件轮廓区间。"""
+    _apply_style()
+    required = {"target", "log10_carrier_cm3", "delta_objective"}
+    if profile.empty or not required.issubset(profile.columns):
+        raise ValueError("浓度轮廓数据缺少必要列")
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.2), layout="constrained")
+    settings = (
+        ("epi", "外延层", result.get("epi_log10_ci90")),
+        ("substrate", "衬底", result.get("substrate_log10_ci90")),
+    )
+    for ax, (target, label, interval) in zip(axes, settings):
+        subset = profile[profile["target"] == target].sort_values(
+            "log10_carrier_cm3"
+        )
+        x = subset["log10_carrier_cm3"].to_numpy(float)
+        delta = subset["delta_objective"].to_numpy(float)
+        ax.plot(x, delta, "o-", color=COLORS["two"], ms=4, label="条件轮廓")
+        ax.axhline(2.706, color=COLORS["peak"], ls="--", label="90% 阈值 Δχ²=2.706")
+        if interval is not None:
+            ax.axvspan(
+                interval[0],
+                interval[1],
+                color=COLORS["smooth"],
+                alpha=0.18,
+                label=f"条件区间 [{interval[0]:.2f}, {interval[1]:.2f}]",
+            )
+        ax.set(
+            title=f"SiC {label}载流子浓度轮廓",
+            xlabel=r"$\log_{10}(N/\mathrm{cm}^{-3})$",
+            ylabel=r"$\Delta$目标函数",
+        )
+        ax.set_yscale("symlog", linthresh=2.706)
+        ax.set_ylim(0, max(8.0, float(np.max(delta)) * 1.05))
+        ax.grid(True)
+        ax.legend(loc="best")
+    fig.suptitle(
+        (
+            "受约束仪器响应下的载流子浓度条件区间\n"
+            f"测量模式：{result['measurement_mode']}；"
+            f"可辨识等级：{result['identifiability_level']}"
+        ),
+        fontsize=13,
+        fontweight="bold",
+    )
+    fig.text(
+        0.5,
+        0.005,
+        "附件2存在超出100%的反射率，区间属于仪器校正条件下结果，不是绝对浓度测量",
+        ha="center",
+        fontsize=8,
+    )
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_summary_figures(
     summary: pd.DataFrame,
     consistency: dict,
     output_dir: Path,
+    dispersion_results: dict | None = None,
+    refractive_curves: pd.DataFrame | None = None,
+    carrier_result: dict | None = None,
+    carrier_profile: pd.DataFrame | None = None,
 ) -> None:
     """生成所有跨附件汇总图。"""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -463,3 +806,17 @@ def plot_summary_figures(
     plot_angle_consistency(summary, consistency, output_dir / "angle_consistency.png")
     plot_multibeam_evidence(summary, output_dir / "multibeam_evidence.png")
     plot_model_quality(summary, output_dir / "model_quality.png")
+    if dispersion_results is not None and refractive_curves is not None:
+        plot_dispersion_curves(
+            refractive_curves, output_dir / "dispersion_curves.png"
+        )
+        plot_carrier_scenarios(
+            dispersion_results, output_dir / "carrier_scenarios.png"
+        )
+        plot_identifiability_diagnostics(
+            dispersion_results, output_dir / "identifiability_diagnostics.png"
+        )
+    if carrier_result is not None and carrier_profile is not None:
+        plot_carrier_profiles(
+            carrier_profile, carrier_result, output_dir / "carrier_profile.png"
+        )
