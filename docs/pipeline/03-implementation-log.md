@@ -293,7 +293,7 @@ python main.py --bootstrap 30
 
 ```text
 python test_model.py
-Ran 41 tests in 26.789s
+Ran 42 tests in 40.578s
 OK
 
 python main.py --bootstrap 30
@@ -305,5 +305,9 @@ python main.py --bootstrap 30
 - 每种材料各6张：波段、级次回归、残差、门控、情景厚度、载流子审计；
 - 全局1张：最终模型决策；
 - 共13张，最小宽度2547 px，均高于1800 px要求。
+
+### 汇总图路径修复
+
+系统复核发现 `plotting.py` 中色散汇总函数存在历史重复定义，主入口传入目录时会误写根目录 `output.png`。现已在 `plot_summary_figures` 中为色散曲线、情景、可辨识性和载流子轮廓传入明确PNG路径，并增加源码路径回归测试。完整入口已验证生成 `output/dispersion_curves.png`、`carrier_scenarios.png`、`identifiability_diagnostics.png` 和 `carrier_profiles.png`。
 
 本次未创建 Git 提交：用户未明确要求提交。
