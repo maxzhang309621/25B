@@ -1,6 +1,6 @@
 # 架构方案：2025 B 题碳化硅外延层厚度的确定
 
-> 版本：v6（2026-08-27，论文图防重叠与独立原始证据图，已确认）
+> 版本：v7（2026-08-28，方案 B 本征色散双轨架构 + 遗留载流子耦合审计轨，**待用户确认**）
 
 ## 需求概述
 
@@ -350,3 +350,165 @@ output/raw_evidence/
 4. 多光束四项原始图数值与 `thickness_summary.csv` 完全一致；四附件谐波频谱复用诊断函数，不重新定义基频。
 5. 色散原始图与 `refractive_index_curves.csv`、`dispersion_fit.json`、`carrier_profile.csv` 完全一致。
 6. 原 21 项测试继续通过，新增文件集合、尺寸、非空和禁止文字测试通过。
+
+## v7 方案 B 本征色散双轨架构 + 遗留载流子耦合审计轨
+
+### 需求概述
+
+用户在**不补充晶型确认、掺杂真值、偏振/温度**等外部信息的前提下，要求：
+
+1. **按方案 B 微调折射率模型**：只引入波长相关的本征/晶格色散，**不把载流子浓度作为自由优化系数**；掺杂仅通过文献固定情景进入系统误差分析。
+2. **保留现有 v3–v6 载流子耦合反演路径**，并**显式输出不可辨识证据**，证明“自由浓度优化”不能替代主厚度结论。
+3. **主厚度结论不变**：仍由常折射率双光束 / 多光束门控路径给出；方案 B 只增强可靠性（系统误差带），不替换主点估计。
+
+约束：Python 离线流水线、四附件输入不变、现有 21 项测试与 v6 图输出不得无证据退化。
+
+### 可行性结论
+
+**可行。**
+
+- 方案 B 降低自由度，与“附件信息不足”一致，可避免 v3–v5 中浓度点估计不可辨识却被误用的风险。
+- 现有 `dispersion.py` 已含 Edwards–Ochoa（Si）与 4H-SiC 单振子晶格项，拆分“本征色散模式”与“Drude 载流子模式”在模块层可行。
+- 双轨并行不冲突：主轨输出论文可用结论；审计轨输出对照实验与门控失败证据，服务论文“模型评价/可靠性”章节。
+
+### 总体架构：三轨并行
+
+```text
+附件 1–4
+    │
+    ├─► 轨 0【主结论轨】（保留 v2–v6，不变）
+    │     常折射率 n=2.55/3.42 → 双光束/多光束门控 → 最终厚度 d*
+    │
+    ├─► 轨 1【方案 B：本征色散系统误差轨】（新增，论文可靠性主补充）
+    │     n(ν) 本征/晶格色散（无自由 N）→ 固定低/中/高掺杂情景（仅作 Drude 开关或固定 N）
+    │     → 只优化厚度 d → 输出 d_sys 区间与相对常数 n 偏差
+    │
+    └─► 轨 2【遗留审计轨】（保留 v3–v6 完整逻辑，标记 audit）
+          自由/半自由 N_epi、N_sub 联合反演 → 可辨识性/留段/轮廓门控
+          → 输出不可辨识证据包（触边、相关、CV、情景比较）
+                │
+                └─► 轨 3【对照汇总轨】（新增）
+                      三轨数值并排 + 采纳理由 + 论文引用字段
+```
+
+**采纳规则（强制）**
+
+| 用途 | 采用轨 | 字段前缀 |
+|---|---|---|
+| 论文主厚度 | 轨 0 | `selected_*`（现有） |
+| 折射率系统误差 / 色散敏感性 | 轨 1 | `intrinsic_*` |
+| 证明浓度不可辨识 / 模型评价 | 轨 2 | `audit_*` |
+| 论文表图统一出口 | 轨 3 | `comparison_*` |
+
+轨 1 **不得**因 RMSE 更低而覆盖轨 0 的 `selected_thickness_um`。
+
+### 模块划分（v7 新增/调整）
+
+| 模块 | 职责 | 所需算法/逻辑/架构类型 |
+|---|---|---|
+| `dispersion.py`（扩展） | 提供 `mode=intrinsic` / `mode=carrier_coupled` 两种复折射率接口；本征模式禁用 Drude 或仅接受固定 N | 策略模式、物理先验分支 |
+| `intrinsic_scenario.py`（新） | 轨 1：固定情景下仅反演厚度；扫描低/中/高掺杂与“无 Drude”四档；输出系统厚度包络 | 受约束单参数反演、情景扫描、包络统计 |
+| `identifiability_audit.py`（新） | 轨 2 证据汇总：Jacobian 条件数、参数相关、触边、留段 CV/偏移、轮廓宽度、相对固定情景改善 | 灵敏度诊断、门控规则引擎、证据报告生成 |
+| `joint_calibration.py`（保留） | 轨 2 自由浓度联合校准；行为与 v3 一致，输出标记 `audit` | 受约束联合反演（遗留） |
+| `carrier_inference.py`（保留） | 轨 2 SiC 增强浓度路径；行为与 v5 一致，输出标记 `audit` | 分阶段反演、轮廓区间（遗留） |
+| `comparison_report.py`（新） | 轨 3：合并三轨结果，生成 `refractive_index_comparison.json` 与论文表字段 | 结果聚合、决策追溯 |
+| `main.py`（扩展） | 顺序执行轨 0→1→2→3；CLI 支持 `--skip-audit` / `--intrinsic-only` | 流水线编排、特性开关 |
+| `plotting.py` / `raw_evidence_plotting.py`（扩展） | 新增本征 n(ν) 曲线、情景厚度包络、三轨对照条带图；审计证据矩阵 | 分面对比可视化 |
+| `model.md` / 论文脚本（后续） | 同步三轨叙述：主模型 + 系统误差 + 不可辨识证据 | 文档生成 |
+
+**不删除**现有模块；v3–v6 代码整体迁入“遗留审计轨”，仅增加命名空间与输出前缀隔离。
+
+### 轨 1（方案 B）折射率定义
+
+**Si**
+
+- 本征：Edwards–Ochoa 波长色散 \(n_0(\lambda)\)，\(\varepsilon=n_0^2\)
+- 可选固定 Drude：仅当情景为 low/medium/high 时叠加 **固定** \(N_{\mathrm{epi}}, N_{\mathrm{sub}}\)（来自 `CARRIER_SCENARIOS_CM3`），**不优化** \(N\)
+- 默认论文推荐：**intrinsic-only**（零载流子 Drude）+ 三档固定情景作为系统误差上/下界
+
+**SiC（4H 各向同性近似）**
+
+- 本征：单振子晶格项（TO/LO/γ 为文献固定常数，不拟合）
+- Drude：同 Si，仅固定情景，不自由优化
+- 强 Reststrahlen 区（约 700–1000 cm⁻¹）不参与轨 1 厚度优化，只作曲线展示
+
+**轨 1 反演变量**
+
+- 自由参数：共享厚度 \(d\)（双角度联合）、各角度有界基线/增益（与现 instrument 剖面消元一致）
+- 固定参数：全部 \(N\)、声子常数、迁移率先验、有效质量
+- 输出：`intrinsic_thickness_um`（每情景）、`intrinsic_systematic_low/high_um`、`intrinsic_vs_constant_delta_pct`
+
+### 轨 2（遗留审计轨）证据包内容
+
+对 SiC/Si 分别输出 `audit_identifiability.json`，至少包含：
+
+1. **优化器证据**：自由拟合最优 \(N_{\mathrm{epi}}, N_{\mathrm{sub}}, d\) 与 RMSE
+2. **门控失败项**（布尔 + 数值）：触边、max_correlation、condition_number、band_cv_pct、max_band_shift_pct、ΔAICc、相对固定情景改善率
+3. **轮廓证据**：90% 条件区间宽度、是否触搜索边界（SiC v5）
+4. **留段证据**：三连续波段厚度序列与阈值对比
+5. **结论字段**：`concentration_identifiable: false`、`failure_reasons: [...]`、`recommended_interpretation: "scenario_envelope_only"`
+
+该轨**目的不是产出新主厚度**，而是为论文提供“为何不做浓度点估计”的可复核证据链。
+
+### 数据流与接口约定（v7）
+
+```text
+run_pipeline()
+  → track0_primary()      # 现有逻辑，输出 selected_*
+  → track1_intrinsic()    # 新：intrinsic_scenario.fit_all()
+  → track2_audit()        # 现有 joint_calibration + carrier_inference，输出 audit_*
+  → track3_compare()      # comparison_report.build()
+  → export CSV/JSON/PNG
+```
+
+**新增输出文件**
+
+| 文件 | 内容 |
+|---|---|
+| `output/intrinsic_dispersion_fit.json` | 轨 1 各情景厚度、RMSE、相对常数 n 偏差 |
+| `output/audit_identifiability.json` | 轨 2 全材料不可辨识证据 |
+| `output/refractive_index_comparison.json` | 三轨并排 + 采纳规则 |
+| `output/intrinsic_n_curves.csv` | 本征 \(n(\tilde\nu), k(\tilde\nu)\)（无 Drude 与三情景） |
+| `output/raw_evidence/dispersion/intrinsic_*_raw.png` | 本征色散原始曲线 |
+| `output/raw_evidence/audit/*_raw.png` | 触边/相关/CV/轮廓原始证据图 |
+
+**`thickness_summary.csv` 扩展列（示例）**
+
+- `intrinsic_systematic_low_um`, `intrinsic_systematic_high_um`, `intrinsic_median_um`
+- `audit_free_fit_thickness_um`, `audit_identifiable`, `audit_failure_reasons`（JSON 字符串或拆列）
+- `primary_track`, `dispersion_track_adopted_for_paper`（固定为 `track0` / `track1_for_systematic_only`）
+
+### 开发步骤与验收标准（v7）
+
+| 步骤 | 描述 | 所需算法类型 | 验收标准（可测试） |
+|---|---|---|---|
+| B1 | `dispersion.py` 增加 intrinsic / carrier_coupled 模式开关 | 策略模式 | intrinsic 模式零载流子时 Si/SiC \(n(\tilde\nu)\) 有限且 \(n>0\)；与现有 Drude 路径数值隔离 |
+| B2 | 实现 `intrinsic_scenario.py` | 固定情景 + 单参数厚度反演 | 四附件各输出 ≥4 档情景厚度；系统包络包含常数 n 主值；**不**写入 `selected_thickness_um` |
+| B3 | 实现 `identifiability_audit.py` | 门控证据聚合 | 真实附件 SiC/Si 均输出 `concentration_identifiable=false` 及 ≥3 条 failure_reasons；与现有 v3–v5 诊断数值一致 |
+| B4 | 保留并隔离轨 2 | 遗留流水线包装 | `joint_calibration`、`carrier_inference` 行为与 v6 回归一致；仅增加 `audit_` 前缀 |
+| B5 | 实现 `comparison_report.py` + `main.py` 编排 | 结果聚合 | `refractive_index_comparison.json` 含三轨厚度、采纳字段、不可辨识摘要 |
+| B6 | 扩展可视化 | 对照图 | 新增本征 n/k 图、情景包络图、审计证据矩阵；综合图标注“系统误差轨/审计轨”图例 |
+| B7 | 更新 `model.md` 与论文可靠性节 | 文档 | 明确：主结果=轨 0；色散=轨 1 系统带；不可辨识=轨 2 证据 |
+| B8 | 测试 | 回归 + 新增 | 原 21 项全过；新增 ≥8 项（intrinsic 曲线、情景包络、audit JSON 契约、三轨不覆盖主值） |
+
+### 论文叙述约定（架构层规定）
+
+1. **模型建立**：仍以常折射率双光束 / 多光束为主（轨 0）。
+2. **可靠性分析**：增加“本征色散固定情景系统误差”（轨 1），写法为 \(d_{\mathrm{sys}}\in[\cdot,\cdot]\)，不写唯一 \(N\)。
+3. **模型评价**：用轨 2 证据说明“载流子浓度自由反演不可辨识”，引用触边、相关、留段 CV 等指标，**不**把 audit 最优厚度当最终答案。
+
+### 风险与边界
+
+- 方案 B **不能**从四条反射谱“测出”掺杂；只能给出折射率假设下的厚度系统误差带——这与题意和附件信息一致，属于特性而非缺陷。
+- 轨 2 保留是为**证明** v3–v5 路径的局限；若论文篇幅有限，审计细节放附录 + `audit_identifiability.json`。
+- 实现时须防止轨 1 与轨 2 共用可变全局状态导致数值串扰；每轨独立输入快照、独立随机种子段。
+
+### v7 与 v3–v6 关系
+
+| 版本能力 | v7 处置 |
+|---|---|
+| 常折射率主厚度 | **保留**，轨 0，不变 |
+| 自由浓度联合校准 | **保留**，轨 2 审计 |
+| 浓度轮廓 / v5 增强 | **保留**，轨 2 审计 |
+| v4/v6 可视化 | **扩展**，增加三轨对照图 |
+| 浓度点估计进主表 | **禁止**（除非未来有新实测约束且门控通过） |
