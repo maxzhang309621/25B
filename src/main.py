@@ -15,10 +15,20 @@ import numpy as np
 import pandas as pd
 
 from carrier_inference import infer_carrier_concentrations
+from comparison_report import (
+    build_dispersion_extrema_comparison,
+    build_refractive_index_comparison,
+)
 from config import BOOTSTRAP_BLOCK_CM1, DATASETS, DATA_DIR, OUTPUT_DIR
 from data_io import load_spectrum
 from diagnostics import diagnose_multibeam
 from dispersion import METADATA
+from dispersion_extrema import fit_dispersion_extrema_scenarios
+from identifiability_audit import build_identifiability_audit
+from intrinsic_scenario import (
+    fit_intrinsic_scenarios,
+    intrinsic_refractive_index_rows,
+)
 from joint_calibration import fit_joint_calibration, refractive_index_rows
 from model_flowchart import plot_model_flowchart
 from multi_beam import fit_multi_beam
@@ -26,7 +36,9 @@ from plotting import plot_spectrum_fit, plot_summary_figures
 from preprocess import preprocess
 from raw_evidence_plotting import (
     plot_raw_dispersion_evidence,
+    plot_raw_extrema_evidence,
     plot_raw_multibeam_evidence,
+    plot_raw_v7_evidence,
 )
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
@@ -62,6 +74,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     details = {}
     sensitivity_rows = []
     material_inputs = {"SiC": [], "Si": []}
+    extrema_inputs = {"SiC": [], "Si": []}
     multibeam_plot_inputs = []  # 供独立谐波频谱原始图复用
 
     for index, spec in enumerate(DATASETS):
@@ -89,6 +102,7 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         material_inputs[spec.material].append(
             (spec.key, calibration_spectrum, selected)
         )
+        extrema_inputs[spec.material].append((processed, two))
         multibeam_plot_inputs.append((spec.key, processed, two))
 
         rows.append(
@@ -139,7 +153,143 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         )
 
     summary = pd.DataFrame(rows)
-    # —— 材料级色散联合校准（SiC / Si 各一对入射角）——
+    # —— v8：透明波段 + 色散坐标多峰谷共享厚度反演 ——
+    v8_results = {}
+    v8_payload = {}
+    v8_observation_rows = []
+    v8_coordinate_rows = []
+    v8_residual_rows = []
+    for material, items in extrema_inputs.items():
+        primary_subset = summary[summary["material"] == material]
+        primary_values = primary_subset["selected_thickness_um"].to_numpy(float)
+        primary_std = np.maximum(
+            primary_subset["bootstrap_std_um"].to_numpy(float),
+            1e-4,
+        )
+        primary_combined = float(
+            np.average(primary_values, weights=1.0 / primary_std**2)
+        )
+        result = fit_dispersion_extrema_scenarios(
+            [item[0] for item in items],
+            [item[1] for item in items],
+            material,
+            primary_combined,
+            bootstrap_repeats=max(20, min(80, 2 * bootstrap_repeats)),
+        )
+        v8_results[material] = result
+        material_mask = summary["material"] == material
+        selected_models = summary.loc[material_mask, "selected_model"].tolist()
+        multi_consistency = (
+            abs(result.nominal_thickness_um - primary_combined)
+            / primary_combined
+            * 100.0
+        )
+        multi_required = any(model == "multi-beam" for model in selected_models)
+        adopted = bool(
+            result.stable and (not multi_required or multi_consistency <= 2.0)
+        )
+        reasons = [result.fallback_reason] if result.fallback_reason else []
+        if multi_required and multi_consistency > 2.0:
+            reasons.append("与 Airy 主厚度相对差超过 2%")
+        fallback_reason = "；".join(reasons)
+        payload = result.to_dict(include_points=False)
+        payload["adopted"] = adopted
+        payload["fallback_reason"] = fallback_reason
+        payload["multi_beam_consistency_pct"] = multi_consistency
+        payload["final_thickness_um"] = (
+            result.nominal_thickness_um if adopted else primary_combined
+        )
+        v8_payload[material] = payload
+
+        summary.loc[material_mask, "v8_nominal_thickness_um"] = (
+            result.nominal_thickness_um
+        )
+        summary.loc[material_mask, "v8_stat_ci95_low_um"] = (
+            result.statistical_ci95_low_um
+        )
+        summary.loc[material_mask, "v8_stat_ci95_high_um"] = (
+            result.statistical_ci95_high_um
+        )
+        summary.loc[material_mask, "v8_systematic_low_um"] = (
+            result.systematic_low_um
+        )
+        summary.loc[material_mask, "v8_systematic_high_um"] = (
+            result.systematic_high_um
+        )
+        summary.loc[material_mask, "v8_peak_valley_diff_pct"] = (
+            result.peak_valley_diff_pct
+        )
+        summary.loc[material_mask, "v8_angle_diff_pct"] = result.angle_diff_pct
+        summary.loc[material_mask, "v8_band_cv_pct"] = result.band_cv_pct
+        summary.loc[material_mask, "v8_stable"] = result.stable
+        summary.loc[material_mask, "v8_adopted"] = adopted
+        summary.loc[material_mask, "v8_final_thickness_um"] = (
+            result.nominal_thickness_um if adopted else primary_combined
+        )
+        summary.loc[material_mask, "v8_fallback_reason"] = fallback_reason
+
+        v8_observation_rows.extend(
+            observation.to_dict() for observation in result.observations
+        )
+        for scenario_result in result.scenario_results:
+            for point in scenario_result.points:
+                row = point.to_dict()
+                v8_coordinate_rows.append(row)
+                if point.eligible:
+                    v8_residual_rows.append(row)
+
+    # —— v7 轨 1：本征色散 + 固定浓度情景，只传播厚度系统误差 ——
+    intrinsic_results = {}
+    intrinsic_rows = []
+    for material, items in material_inputs.items():
+        primary_subset = summary[summary["material"] == material]
+        primary_values = primary_subset["selected_thickness_um"].to_numpy(float)
+        primary_std = np.maximum(
+            primary_subset["bootstrap_std_um"].to_numpy(float),
+            1e-4,
+        )
+        primary_combined = float(
+            np.average(primary_values, weights=1.0 / primary_std**2)
+        )
+        intrinsic = fit_intrinsic_scenarios(
+            [item[1] for item in items],
+            [item[2] for item in items],
+            material,
+            constant_reference_um=primary_combined,
+        )
+        intrinsic_results[material] = intrinsic
+        for key, _, _ in items:
+            details[key]["intrinsic_dispersion_scenarios"] = intrinsic.to_dict()
+        material_mask = summary["material"] == material
+        summary.loc[material_mask, "intrinsic_thickness_um"] = (
+            intrinsic.intrinsic_thickness_um
+        )
+        summary.loc[material_mask, "intrinsic_median_um"] = (
+            intrinsic.intrinsic_median_um
+        )
+        summary.loc[material_mask, "intrinsic_systematic_low_um"] = (
+            intrinsic.intrinsic_systematic_low_um
+        )
+        summary.loc[material_mask, "intrinsic_systematic_high_um"] = (
+            intrinsic.intrinsic_systematic_high_um
+        )
+        summary.loc[material_mask, "intrinsic_vs_constant_delta_pct"] = (
+            intrinsic.intrinsic_vs_constant_delta_pct
+        )
+        summary.loc[material_mask, "primary_track"] = "track0_primary"
+        summary.loc[material_mask, "dispersion_track_adopted_for_paper"] = (
+            "track1_intrinsic_systematic_only"
+        )
+        lo, hi = METADATA[material].valid_wavenumber_cm1
+        intrinsic_rows.extend(
+            intrinsic_refractive_index_rows(
+                material,
+                intrinsic,
+                np.linspace(lo, hi, 300),
+            )
+        )
+
+    # —— v7 轨 2：保留 v3–v6 自由载流子联合校准，作为可辨识性审计 ——
     joint_results = {}
     refractive_rows = []
     for material, items in material_inputs.items():
@@ -226,6 +376,32 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     for key, _, _ in sic_items:
         details[key]["enhanced_carrier_inference"] = carrier_payload
 
+    identifiability_audit = build_identifiability_audit(
+        joint_results,
+        carrier_result,
+    )
+    for material in ("SiC", "Si"):
+        material_mask = summary["material"] == material
+        summary.loc[material_mask, "audit_identifiable"] = bool(
+            joint_results[material].concentration_identifiable
+        )
+        summary.loc[material_mask, "audit_failure_reasons"] = (
+            joint_results[material].fallback_reason
+        )
+        summary.loc[material_mask, "audit_free_fit_thickness_um"] = (
+            joint_results[material].fitted_thickness_um
+        )
+
+    comparison_payload = build_refractive_index_comparison(
+        summary,
+        intrinsic_results,
+        identifiability_audit,
+    )
+    v8_comparison_payload = build_dispersion_extrema_comparison(
+        summary,
+        v8_payload,
+    )
+
     summary.to_csv(OUTPUT_DIR / "thickness_summary.csv", index=False, encoding="utf-8-sig")
     pd.DataFrame(sensitivity_rows).to_csv(
         OUTPUT_DIR / "band_sensitivity.csv",
@@ -260,6 +436,50 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         index=False,
         encoding="utf-8-sig",
     )
+    intrinsic_payload = {
+        material: result.to_dict() for material, result in intrinsic_results.items()
+    }
+    intrinsic_frame = pd.DataFrame(intrinsic_rows)
+    with (OUTPUT_DIR / "intrinsic_dispersion_fit.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(intrinsic_payload, handle, ensure_ascii=False, indent=2)
+    intrinsic_frame.to_csv(
+        OUTPUT_DIR / "intrinsic_n_curves.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    with (OUTPUT_DIR / "audit_identifiability.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(identifiability_audit, handle, ensure_ascii=False, indent=2)
+    with (OUTPUT_DIR / "refractive_index_comparison.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(comparison_payload, handle, ensure_ascii=False, indent=2)
+    with (OUTPUT_DIR / "dispersion_extrema_fit.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(v8_payload, handle, ensure_ascii=False, indent=2)
+    pd.DataFrame(v8_observation_rows).to_csv(
+        OUTPUT_DIR / "extrema_observations.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    pd.DataFrame(v8_coordinate_rows).to_csv(
+        OUTPUT_DIR / "dispersion_extrema_coordinates.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    pd.DataFrame(v8_residual_rows).to_csv(
+        OUTPUT_DIR / "dispersion_extrema_residuals.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    with (OUTPUT_DIR / "dispersion_extrema_comparison.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        json.dump(v8_comparison_payload, handle, ensure_ascii=False, indent=2)
 
     consistency = {}
     for material in ("SiC", "Si"):
@@ -282,6 +502,26 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             "dispersion_candidate_identifiable": joint_results[
                 material
             ].concentration_identifiable,
+            "intrinsic_thickness_um": intrinsic_results[
+                material
+            ].intrinsic_thickness_um,
+            "intrinsic_systematic_interval_um": [
+                intrinsic_results[material].intrinsic_systematic_low_um,
+                intrinsic_results[material].intrinsic_systematic_high_um,
+            ],
+            "carrier_audit_role": "evidence_only",
+            "v8_nominal_thickness_um": v8_payload[material][
+                "nominal_thickness_um"
+            ],
+            "v8_systematic_interval_um": [
+                v8_payload[material]["systematic_low_um"],
+                v8_payload[material]["systematic_high_um"],
+            ],
+            "v8_adopted": v8_payload[material]["adopted"],
+            "v8_final_thickness_um": v8_payload[material][
+                "final_thickness_um"
+            ],
+            "v8_fallback_reason": v8_payload[material]["fallback_reason"],
         }
     consistency["SiC"]["enhanced_carrier_inference"] = {
         "measurement_mode": carrier_result.measurement_mode,
@@ -315,6 +555,17 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         dispersion_payload,
         carrier_profile_frame,
         OUTPUT_DIR / "raw_evidence" / "dispersion",
+    )
+    plot_raw_v7_evidence(
+        intrinsic_frame,
+        intrinsic_payload,
+        identifiability_audit,
+        OUTPUT_DIR / "raw_evidence" / "dispersion",
+        OUTPUT_DIR / "raw_evidence" / "audit",
+    )
+    plot_raw_extrema_evidence(
+        v8_results,
+        OUTPUT_DIR / "raw_evidence" / "extrema",
     )
     plot_model_flowchart(OUTPUT_DIR / "model_flowchart.png")
 

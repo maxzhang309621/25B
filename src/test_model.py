@@ -24,7 +24,12 @@ _band_spec.loader.exec_module(_band_select)
 select_band = _band_select.select_band
 score_band = _band_select.score_band
 
-from carrier_inference import infer_carrier_concentrations
+from carrier_inference import CarrierInferenceResult, infer_carrier_concentrations
+from band_eligibility import BandEligibility, evaluate_band_eligibility
+from comparison_report import (
+    build_dispersion_extrema_comparison,
+    build_refractive_index_comparison,
+)
 from config import DATASETS, DATA_DIR
 from data_io import Spectrum, load_spectrum
 from dispersion import (
@@ -34,7 +39,22 @@ from dispersion import (
     material_refractive_index,
     si_intrinsic_n,
 )
-from joint_calibration import fit_joint_calibration
+from dispersion_extrema import (
+    MappedExtremum,
+    fit_dispersion_extrema_scenarios,
+    map_extrema_to_scenario,
+)
+from extrema_observation import ExtremumObservation, observe_extrema
+from identifiability_audit import build_identifiability_audit
+from intrinsic_scenario import (
+    fit_intrinsic_scenarios,
+    intrinsic_refractive_index_rows,
+)
+from joint_calibration import (
+    JointCalibrationResult,
+    ScenarioThickness,
+    fit_joint_calibration,
+)
 from instrument_response import (
     carrier_spectral_weights,
     instrument_prediction,
@@ -59,8 +79,11 @@ from plotting import (
 from preprocess import ProcessedSpectrum
 from raw_evidence_plotting import (
     plot_raw_dispersion_evidence,
+    plot_raw_extrema_evidence,
     plot_raw_multibeam_evidence,
+    plot_raw_v7_evidence,
 )
+from shared_thickness import fit_shared_thickness
 from two_beam import estimate_two_beam
 
 
@@ -501,6 +524,408 @@ class VisualizationTests(unittest.TestCase):
             self.assertTrue(all(imread(path).shape[1] >= 1800 for path in raw_paths))
             self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
             self.assertTrue(all(imread(path).shape[1] >= 1800 for path in paths))
+
+
+class V7IntrinsicScenarioTests(unittest.TestCase):
+    @staticmethod
+    def _synthetic_sic_inputs():
+        x = np.linspace(1200.0, 4000.0, 1200)
+        spectra = []
+        thickness = 8.0
+        for spec in DATASETS[:2]:
+            index = material_refractive_index("SiC", x, mode="intrinsic")
+            sin0 = np.sin(np.deg2rad(spec.angle_deg))
+            optical = np.sqrt(index.real**2 - sin0**2)
+            phase = 4 * np.pi * thickness * 1e-4 * x * optical
+            residual = 0.8 * np.cos(phase + 0.25)
+            source = Spectrum(x, 20.0 + residual, spec, {})
+            spectra.append(
+                ProcessedSpectrum(
+                    x,
+                    20.0 + residual,
+                    20.0 + residual,
+                    np.full_like(x, 20.0),
+                    residual,
+                    float(np.median(np.diff(x))),
+                    source,
+                )
+            )
+        return spectra
+
+    @staticmethod
+    def _audit_objects():
+        scenarios = [
+            ScenarioThickness("low", 1e15, 3e17, 7.2, 1.3),
+            ScenarioThickness("medium", 1e17, 7.1e18, 7.15, 2.7),
+            ScenarioThickness("high", 3e18, 2e19, 8.33, 4.3),
+        ]
+        joint = JointCalibrationResult(
+            material="SiC",
+            fitted_thickness_um=7.72,
+            adopted_thickness_um=7.83,
+            epi_carrier_cm3=1.1e17,
+            substrate_carrier_cm3=3.5e18,
+            rmse_pct=1.52,
+            jacobian_condition=9.9,
+            max_parameter_correlation=0.38,
+            concentration_identifiable=False,
+            boundary_hit=False,
+            adopted_basis="回退常折射率基线",
+            systematic_low_um=7.15,
+            systematic_high_um=8.33,
+            band_thicknesses_um=[7.0, 8.28, 7.99],
+            band_cv_pct=8.69,
+            max_band_shift_pct=14.99,
+            band_stable=False,
+            scenarios=scenarios,
+            model="test",
+            references=("test",),
+            fallback_reason="连续波段厚度稳定性未通过",
+        )
+        carrier = CarrierInferenceResult(
+            material="SiC",
+            measurement_mode="relative_shape",
+            qualification={
+                "absolute_concentration_allowed": False,
+                "reason": "反射率超界",
+            },
+            identifiability_level="bounded_scenario",
+            candidate_thickness_um=7.60,
+            candidate_epi_carrier_cm3=6.5e17,
+            candidate_substrate_carrier_cm3=2.1e18,
+            reported_epi_carrier_cm3=None,
+            reported_substrate_carrier_cm3=None,
+            epi_log10_ci90=(17.69, 17.87),
+            substrate_log10_ci90=(17.48, 18.32),
+            epi_ci90_cm3=(4.9e17, 7.4e17),
+            substrate_ci90_cm3=(3e17, 2.1e18),
+            epi_interval_boundary_hit=False,
+            substrate_interval_boundary_hit=True,
+            thickness_boundary_hit=True,
+            carrier_correlation=0.08,
+            fixed_scenario_improvement_pct=2.76,
+            gains=(0.97, 1.05),
+            offsets_pct=(0.16, -0.44),
+            shared_slope_pct=-0.18,
+            objective=10603.0,
+            fallback_reason="资格与轮廓门控未通过",
+            informative_bands_cm1=((700.0, 1200.0), (1200.0, 4000.0)),
+        )
+        return joint, carrier
+
+    def test_dispersion_modes_are_explicit_and_backward_compatible(self):
+        x = np.array([1200.0, 2000.0, 3500.0])
+        intrinsic = material_epsilon("SiC", x, 1e18, mode="intrinsic")
+        zero = material_epsilon("SiC", x, 0.0)
+        np.testing.assert_allclose(intrinsic, zero)
+        fixed = material_epsilon("SiC", x, 1e18, mode="fixed_carrier")
+        legacy = material_epsilon("SiC", x, 1e18)
+        np.testing.assert_allclose(fixed, legacy)
+
+    def test_invalid_dispersion_mode_raises(self):
+        with self.assertRaises(ValueError):
+            material_epsilon("SiC", np.array([1200.0]), mode="free")
+
+    def test_intrinsic_scenarios_recover_synthetic_thickness(self):
+        result = fit_intrinsic_scenarios(
+            self._synthetic_sic_inputs(),
+            [8.0, 8.0],
+            "SiC",
+        )
+        self.assertEqual([item.name for item in result.scenarios], ["intrinsic", "low", "medium", "high"])
+        self.assertAlmostEqual(result.intrinsic_thickness_um, 8.0, places=2)
+        self.assertLessEqual(result.intrinsic_systematic_low_um, 8.0)
+        self.assertGreaterEqual(result.intrinsic_systematic_high_um, 8.0)
+        referenced = fit_intrinsic_scenarios(
+            self._synthetic_sic_inputs(),
+            [8.0, 8.0],
+            "SiC",
+            constant_reference_um=8.1,
+        )
+        self.assertEqual(referenced.primary_thickness_um, 8.1)
+        self.assertGreaterEqual(referenced.intrinsic_systematic_high_um, 8.1)
+
+    def test_intrinsic_curve_export_contains_all_scenarios(self):
+        result = fit_intrinsic_scenarios(
+            self._synthetic_sic_inputs(),
+            [8.0, 8.0],
+            "SiC",
+        )
+        rows = intrinsic_refractive_index_rows(
+            "SiC",
+            result,
+            np.linspace(1200.0, 4000.0, 12),
+        )
+        self.assertEqual(len(rows), 48)
+        self.assertEqual({row["scenario"] for row in rows}, {"intrinsic", "low", "medium", "high"})
+        self.assertTrue(all(row["n_epi"] > 0 for row in rows))
+
+    def test_audit_preserves_numeric_failure_evidence(self):
+        joint, carrier = self._audit_objects()
+        audit = build_identifiability_audit({"SiC": joint}, carrier)
+        evidence = audit["materials"]["SiC"]["joint_calibration"]
+        self.assertFalse(evidence["concentration_identifiable"])
+        self.assertFalse(evidence["checks"]["band_cv_pct"]["passed"])
+        self.assertFalse(evidence["checks"]["max_band_shift_pct"]["passed"])
+        enhanced = audit["materials"]["SiC"]["enhanced_carrier_inference"]
+        self.assertFalse(enhanced["point_estimate_reported"])
+        self.assertGreaterEqual(len(enhanced["failure_reasons"]), 3)
+
+    def test_comparison_never_overrides_primary_track(self):
+        spectra = self._synthetic_sic_inputs()
+        intrinsic = fit_intrinsic_scenarios(spectra, [8.0, 8.0], "SiC")
+        joint, carrier = self._audit_objects()
+        audit = build_identifiability_audit({"SiC": joint}, carrier)
+        summary = pd.DataFrame(
+            {
+                "material": ["SiC", "SiC"],
+                "angle_deg": [10.0, 15.0],
+                "selected_model": ["two-beam", "two-beam"],
+                "selected_thickness_um": [7.88, 7.79],
+                "bootstrap_std_um": [0.15, 0.13],
+            }
+        )
+        comparison = build_refractive_index_comparison(
+            summary,
+            {"SiC": intrinsic},
+            audit,
+        )
+        material = comparison["materials"]["SiC"]
+        self.assertEqual(material["decision"]["primary_track"], "track0_primary")
+        self.assertTrue(material["track0_primary"]["adopted_for_paper"])
+        self.assertEqual(
+            material["track1_intrinsic_systematic"]["adopted_for_paper"],
+            "systematic_only",
+        )
+
+    def test_v7_raw_evidence_figures_are_created(self):
+        result = fit_intrinsic_scenarios(
+            self._synthetic_sic_inputs(),
+            [8.0, 8.0],
+            "SiC",
+        )
+        # 绘图接口需要两种材料；复用同一结构只用于输出契约测试。
+        payload = {"SiC": result.to_dict(), "Si": result.to_dict()}
+        curves = pd.DataFrame(
+            intrinsic_refractive_index_rows(
+                "SiC", result, np.linspace(1200.0, 4000.0, 20)
+            )
+        )
+        si_curves = curves.copy()
+        si_curves["material"] = "Si"
+        curves = pd.concat([curves, si_curves], ignore_index=True)
+        joint, carrier = self._audit_objects()
+        audit = build_identifiability_audit(
+            {"SiC": joint, "Si": joint},
+            carrier,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plot_raw_v7_evidence(
+                curves,
+                payload,
+                audit,
+                root / "dispersion",
+                root / "audit",
+            )
+            paths = list(root.rglob("*.png"))
+            self.assertEqual(len(paths), 7)
+            self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
+
+
+class V8DispersionExtremaTests(unittest.TestCase):
+    @staticmethod
+    def _mapped_points(thickness_um=8.0, with_outlier=False):
+        slope = 2.0 * thickness_um * 1e-4
+        points = []
+        for dataset, angle in (("sic_10", 10.0), ("sic_15", 15.0)):
+            for kind, offset in (("peak", 0.0), ("valley", 120.0)):
+                base = 3000.0 + offset + (20.0 if angle == 15.0 else 0.0)
+                for order in range(8):
+                    g = base + order / slope
+                    if with_outlier and dataset == "sic_10" and kind == "peak" and order == 4:
+                        g += 180.0
+                    points.append(
+                        MappedExtremum(
+                            dataset=dataset,
+                            material="SiC",
+                            scenario="intrinsic",
+                            angle_deg=angle,
+                            kind=kind,
+                            order_local=order,
+                            order_recovered=order,
+                            sample_index=len(points),
+                            wavenumber_cm1=1200.0 + order * 300.0,
+                            g_cm1=g,
+                            n_real=2.55,
+                            extinction_k=0.0,
+                            quality_weight=1.0,
+                            eligible=True,
+                        )
+                    )
+        return points
+
+    def test_band_eligibility_excludes_sic_absorption_region(self):
+        processed = V7IntrinsicScenarioTests._synthetic_sic_inputs()[0]
+        eligibility = evaluate_band_eligibility(
+            processed,
+            "SiC",
+            "intrinsic",
+            "intrinsic",
+            0.0,
+        )
+        x = processed.wavenumber_cm1
+        self.assertTrue(eligibility.qualified)
+        self.assertFalse(np.any(eligibility.mask[(x >= 1300) & (x <= 1600)]))
+        self.assertTrue(eligibility.monotonic)
+
+    def test_band_eligibility_rejects_empty_transparent_region(self):
+        processed = V7IntrinsicScenarioTests._synthetic_sic_inputs()[0]
+        eligibility = evaluate_band_eligibility(
+            processed,
+            "SiC",
+            "intrinsic",
+            "intrinsic",
+            0.0,
+            max_extinction=-1.0,
+        )
+        self.assertFalse(eligibility.qualified)
+        self.assertEqual(np.count_nonzero(eligibility.mask), 0)
+
+    def test_extrema_observation_contains_quality_metadata(self):
+        processed = V7IntrinsicScenarioTests._synthetic_sic_inputs()[0]
+        two = estimate_two_beam(processed)
+        observations = observe_extrema(processed, two)
+        self.assertGreaterEqual(len(observations), 12)
+        self.assertEqual({item.kind for item in observations}, {"peak", "valley"})
+        self.assertTrue(all(item.prominence_pct > 0 for item in observations))
+        self.assertTrue(all(item.quality_weight > 0 for item in observations))
+
+    def test_mapping_recovers_missing_fringe_order(self):
+        x = np.arange(7.0)
+        eligibility = BandEligibility(
+            material="SiC",
+            scenario="intrinsic",
+            mask=np.ones(7, dtype=bool),
+            n_real=np.full(7, 2.55),
+            extinction_k=np.zeros(7),
+            phase_coordinate_cm1=x * 100.0,
+            eligible_width_cm1=600.0,
+            eligible_fraction=1.0,
+            monotonic=True,
+            qualified=True,
+            failure_reason="",
+        )
+        observations = [
+            ExtremumObservation(
+                "sic_10",
+                "SiC",
+                10.0,
+                "peak",
+                order,
+                index,
+                1200.0 + index,
+                1.0,
+                10.0,
+                False,
+                1.0,
+            )
+            for order, index in enumerate((1, 2, 3, 5, 6))
+        ]
+        mapped = map_extrema_to_scenario(
+            observations,
+            {"sic_10": eligibility},
+            "intrinsic",
+        )
+        self.assertEqual(
+            [point.order_recovered for point in mapped],
+            [0, 1, 2, 4, 5],
+        )
+
+    def test_shared_slope_recovers_exact_thickness(self):
+        result = fit_shared_thickness(
+            self._mapped_points(),
+            bootstrap_repeats=20,
+        )
+        self.assertAlmostEqual(result.thickness_um, 8.0, places=6)
+        self.assertTrue(result.stable)
+        self.assertEqual(result.inlier_count, 32)
+
+    def test_shared_slope_limits_single_outlier(self):
+        result = fit_shared_thickness(
+            self._mapped_points(with_outlier=True),
+            bootstrap_repeats=20,
+        )
+        self.assertLess(abs(result.thickness_um - 8.0) / 8.0, 0.01)
+        self.assertLessEqual(result.rejected_fraction, 0.2)
+
+    def test_shared_fit_rejects_insufficient_points(self):
+        with self.assertRaises(ValueError):
+            fit_shared_thickness(self._mapped_points()[:3])
+
+    def test_material_scenarios_recover_synthetic_dispersion(self):
+        spectra = V7IntrinsicScenarioTests._synthetic_sic_inputs()
+        two = [estimate_two_beam(processed) for processed in spectra]
+        result = fit_dispersion_extrema_scenarios(
+            spectra,
+            two,
+            "SiC",
+            8.0,
+            bootstrap_repeats=20,
+        )
+        self.assertEqual(len(result.scenario_results), 4)
+        self.assertAlmostEqual(result.nominal_thickness_um, 8.0, delta=0.1)
+        self.assertLessEqual(result.systematic_low_um, 8.0)
+        self.assertGreaterEqual(result.systematic_high_um, 8.0)
+
+    def test_v8_comparison_uses_explicit_adoption_flag(self):
+        summary = pd.DataFrame(
+            {
+                "material": ["SiC", "SiC"],
+                "angle_deg": [10.0, 15.0],
+                "selected_thickness_um": [7.9, 7.8],
+                "bootstrap_std_um": [0.1, 0.1],
+            }
+        )
+        payload = {
+            "SiC": {
+                "nominal_thickness_um": 7.5,
+                "statistical_ci95_low_um": 7.4,
+                "statistical_ci95_high_um": 7.6,
+                "systematic_low_um": 7.3,
+                "systematic_high_um": 7.85,
+                "peak_valley_diff_pct": 0.4,
+                "angle_diff_pct": 1.2,
+                "band_cv_pct": 0.8,
+                "multi_beam_consistency_pct": 4.0,
+                "adopted": False,
+                "final_thickness_um": 7.85,
+                "fallback_reason": "测试回退",
+            }
+        }
+        comparison = build_dispersion_extrema_comparison(summary, payload)
+        self.assertFalse(comparison["materials"]["SiC"]["v8_adopted"])
+        self.assertEqual(
+            comparison["materials"]["SiC"]["final_thickness_um"],
+            7.85,
+        )
+
+    def test_v8_raw_extrema_figures_are_created(self):
+        spectra = V7IntrinsicScenarioTests._synthetic_sic_inputs()
+        two = [estimate_two_beam(processed) for processed in spectra]
+        result = fit_dispersion_extrema_scenarios(
+            spectra,
+            two,
+            "SiC",
+            8.0,
+            bootstrap_repeats=20,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            plot_raw_extrema_evidence({"SiC": result}, output)
+            paths = list(output.glob("*.png"))
+            self.assertEqual(len(paths), 6)
+            self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
 
 
 if __name__ == "__main__":

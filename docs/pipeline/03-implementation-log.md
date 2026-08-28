@@ -196,3 +196,80 @@ python src/main.py
 ```
 
 本次未创建 Git 提交：当前请求未明确授权提交，保留工作区变更供用户审阅。
+
+## v7 方案 B 本征色散三轨实现（2026-08-28）
+
+### 完成内容
+
+- B1：`dispersion.py` 新增 `intrinsic`、`fixed_carrier`、`carrier_coupled` 三种显式模式；旧调用默认保持载流子耦合行为。
+- B2：新增 `intrinsic_scenario.py`。在透明相位区对本征、低、中、高四个固定情景执行双角度共享厚度反演；浓度不进入优化变量。相位目标先粗网格定位，再做有界局部精修。
+- B3：新增 `identifiability_audit.py`，聚合 Jacobian 条件数、参数相关、触边、连续留段 CV/偏移、固定情景改善与浓度轮廓证据。
+- B4：新增 `comparison_report.py`，显式合并主结论轨、本征色散系统误差轨、自由浓度审计轨；禁止按 RMSE 自动覆盖主结果。
+- B5：`main.py` 接入四个新输出，并扩展 `thickness_summary.csv`、`consistency.json` 与 `fit_details.json`。
+- B6：`raw_evidence_plotting.py` 新增 5 张本征/固定情景原始图及 2 张审计指标原始图。
+- B7：同步更新 `model.md`、`README.md`、详细版论文生成脚本及 Word 文档；在不改变既定一、二级标题的前提下新增本征色散情景模型与自由浓度审计三级节。
+
+### 关键实现说明
+
+本征情景下外延层与衬底使用相同介电函数，完整 Fresnel 层间反射会退化，不能由绝对反射幅值识别厚度。因此方案 B 使用透明区相位模型：本征/固定情景折射率决定相位，正余弦变量投影吸收未知振幅与相位偏置。该模型只用于厚度的折射率系统敏感性，不用于绝对浓度测量。
+
+### 实际运行
+
+```text
+python test_model.py
+Ran 28 tests in 20.018s
+OK
+
+python main.py --bootstrap 30
+退出码：0；三轨完整执行并生成 JSON、CSV 与 7 张 v7 原始证据图
+```
+
+### 当前附件结果
+
+- 主结论轨保持不变：SiC 约 7.83 µm；Si 约 3.59 µm。
+- 本征色散轨：SiC 本征值约 7.507 µm，固定情景系统范围约 7.334–7.832 µm；Si 本征值约 3.605 µm，范围约 3.584–3.605 µm。
+- SiC 自由浓度审计失败证据：留段 CV 8.69%、最大偏移 14.99%、自由拟合相对最佳固定情景劣化 13.50%；增强轨另有反射率资格、轮廓触边、厚度触边和改善不足。
+- Si 自由浓度审计失败证据：参数触及先验边界，自由拟合相对最佳固定情景劣化约 2.36%。
+
+本次未创建 Git 提交：用户要求实现但未明确要求提交，工作区变更保留供审阅。
+
+## v8 色散坐标多峰谷稳健反演（2026-08-28）
+
+### 完成内容
+
+- E1：新增 `band_eligibility.py`，按消光系数、相位坐标单调性、透明区宽度和边缘距离生成物理资格掩膜。
+- E2：新增 `extrema_observation.py`，复用 L0 峰谷位置并补充显著度、半高宽、边缘标记和质量权重。
+- E3：新增 `dispersion_extrema.py`，将各固定情景峰谷映射到 \(g=\tilde\nu\sqrt{n^2-\sin^2\theta}\)，并按相邻 \(g\) 间距倍数恢复漏级。
+- E4：新增 `shared_thickness.py`，实现四序列共享斜率、独立截距的稳健最小二乘；输出异常极值、峰谷/角度子模型、留段和重采样诊断。
+- E5：扩展 `main.py` 和 `comparison_report.py`，新增 v8 显式采用/回退状态，生成5项结构化输出。
+- E6：扩展 `raw_evidence_plotting.py`，生成8张情景级次回归图和4张数据集映射间距图。
+- E7：更新 `README.md`、`model.md`、详细版论文生成脚本与 Word 文档；原一、二级标题保持不变。
+
+### 实际运行
+
+```text
+python test_model.py
+Ran 38 tests in 22.394s
+OK
+
+python main.py --bootstrap 30
+退出码：0；v8 与 v1–v7 全部路径执行成功
+```
+
+### 当前结果
+
+- SiC：v8 名义厚度 7.4516 µm，统计95%区间 [7.4306, 7.4827] µm；峰谷差0.399%、双角度差1.175%、留段CV 0.738%、最大偏移1.563%，39个合格极值无剔除，v8采用。
+- SiC固定情景与常折射率基线构成模型系统范围 [7.3679, 7.8323] µm。
+- Si：v8候选3.3995 µm；峰谷差4.771%、留段CV 3.168%、最大偏移4.449%、与Airy差5.419%，v8不采用，回退Airy结果3.5943 µm。
+- 自由载流子浓度审计轨保持原结论，不可辨识候选未进入名义厚度。
+
+### 输出
+
+- `extrema_observations.csv`
+- `dispersion_extrema_coordinates.csv`
+- `dispersion_extrema_fit.json`
+- `dispersion_extrema_residuals.csv`
+- `dispersion_extrema_comparison.json`
+- `raw_evidence/extrema/`（12张原始证据图）
+
+本次未创建 Git 提交：用户未明确要求提交。

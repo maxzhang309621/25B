@@ -1,17 +1,31 @@
 {
   "SiC": {
     "angle_relative_difference_pct": 1.1631850353589508,
-    "weighted_combined_thickness_um": 7.851480969402046,
+    "weighted_combined_thickness_um": 7.832327236045142,
     "selected_models": [
       "two-beam",
       "two-beam"
     ],
     "dispersion_adopted_thickness_um": 7.83702069053355,
     "dispersion_systematic_interval_um": [
-      7.147891354797241,
-      8.334156541441242
+      7.1478913547923435,
+      8.334156541427381
     ],
     "dispersion_candidate_identifiable": false,
+    "intrinsic_thickness_um": 7.5065263346299,
+    "intrinsic_systematic_interval_um": [
+      7.333545701224559,
+      7.832327236045142
+    ],
+    "carrier_audit_role": "evidence_only",
+    "v8_nominal_thickness_um": 7.451554654352065,
+    "v8_systematic_interval_um": [
+      7.367948804258811,
+      7.832327236045142
+    ],
+    "v8_adopted": true,
+    "v8_final_thickness_um": 7.451554654352065,
+    "v8_fallback_reason": "",
     "enhanced_carrier_inference": {
       "measurement_mode": "relative_shape",
       "identifiability_level": "bounded_scenario",
@@ -23,22 +37,36 @@
       ],
       "substrate_ci90_cm3": [
         3.000000000000001e+17,
-        2.073182713083798e+18
+        2.0731827067097503e+18
       ]
     }
   },
   "Si": {
-    "angle_relative_difference_pct": 0.3794470659290821,
-    "weighted_combined_thickness_um": 3.593373506898214,
+    "angle_relative_difference_pct": 0.3794467369999696,
+    "weighted_combined_thickness_um": 3.594310187855256,
     "selected_models": [
       "multi-beam",
       "multi-beam"
     ],
-    "dispersion_adopted_thickness_um": 3.414231907026287,
+    "dispersion_adopted_thickness_um": 3.4142319070255858,
     "dispersion_systematic_interval_um": [
-      3.1602050137321993,
-      3.884553072393689
+      3.160205025021639,
+      3.8845530723935084
     ],
-    "dispersion_candidate_identifiable": false
+    "dispersion_candidate_identifiable": false,
+    "intrinsic_thickness_um": 3.6052861175893227,
+    "intrinsic_systematic_interval_um": [
+      3.5840904840496624,
+      3.6052861175893227
+    ],
+    "carrier_audit_role": "evidence_only",
+    "v8_nominal_thickness_um": 3.399535103780822,
+    "v8_systematic_interval_um": [
+      3.594310187855256,
+      3.594310187855256
+    ],
+    "v8_adopted": false,
+    "v8_final_thickness_um": 3.594310187855256,
+    "v8_fallback_reason": "峰谷厚度相对差超过 1.5%；连续波段厚度 CV 超过 2%；连续波段最大偏移超过 3%；与 Airy 主厚度相对差超过 2%"
   }
 }

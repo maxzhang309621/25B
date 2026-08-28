@@ -314,3 +314,197 @@ def plot_raw_dispersion_evidence(
         ax.grid(True)
         _external_legend(ax)
         _save(fig, output_dir / f"{target}_carrier_profile_raw.png")
+
+
+def plot_raw_v7_evidence(
+    intrinsic_curves: pd.DataFrame,
+    intrinsic_results: dict,
+    audit: dict,
+    dispersion_output_dir: Path,
+    audit_output_dir: Path,
+) -> None:
+    """导出 v7 本征色散情景与不可辨识指标的纯数据图。"""
+    _style()
+    required = {
+        "material",
+        "scenario",
+        "wavenumber_cm1",
+        "n_epi",
+        "k_epi",
+    }
+    if intrinsic_curves.empty or not required.issubset(intrinsic_curves.columns):
+        raise ValueError("v7 本征色散曲线缺少必要列")
+    dispersion_output_dir.mkdir(parents=True, exist_ok=True)
+    audit_output_dir.mkdir(parents=True, exist_ok=True)
+
+    for material in ("SiC", "Si"):
+        subset = intrinsic_curves[intrinsic_curves["material"] == material]
+        for component, label in (("n_epi", "折射率实部 n"), ("k_epi", "消光系数 k")):
+            fig, ax = plt.subplots(figsize=(8.4, 5.2), layout="constrained")
+            for scenario, frame in subset.groupby("scenario", sort=False):
+                ordered = frame.sort_values("wavenumber_cm1")
+                ax.plot(
+                    ordered["wavenumber_cm1"],
+                    ordered[component],
+                    label=str(scenario),
+                )
+            ax.set(
+                title=f"{material} 本征与固定情景{label}",
+                xlabel=r"波数 (cm$^{-1}$)",
+                ylabel=label,
+            )
+            ax.grid(True)
+            _external_legend(ax)
+            suffix = "n" if component == "n_epi" else "k"
+            _save(
+                fig,
+                dispersion_output_dir
+                / f"intrinsic_{material.lower()}_{suffix}_raw.png",
+            )
+
+    scenario_rows = []
+    for material, result in intrinsic_results.items():
+        for scenario in result["scenarios"]:
+            scenario_rows.append(
+                {
+                    "material": material,
+                    "scenario": scenario["name"],
+                    "thickness_um": scenario["thickness_um"],
+                }
+            )
+    frame = pd.DataFrame(scenario_rows)
+    fig, ax = plt.subplots(figsize=(8.4, 5.2), layout="constrained")
+    names = list(dict.fromkeys(frame["scenario"].tolist()))
+    positions = np.arange(len(names))
+    for material, marker in (("SiC", "o"), ("Si", "s")):
+        subset = frame[frame["material"] == material].set_index("scenario").loc[names]
+        ax.plot(
+            positions,
+            subset["thickness_um"],
+            marker=marker,
+            ms=7,
+            label=material,
+        )
+    ax.set_xticks(positions, names)
+    ax.set(
+        title="本征与固定载流子情景厚度",
+        xlabel="固定光学情景",
+        ylabel="厚度 (µm)",
+    )
+    ax.grid(True)
+    _external_legend(ax)
+    _save(fig, dispersion_output_dir / "intrinsic_scenario_thickness_raw.png")
+
+    for material, payload in audit["materials"].items():
+        checks = payload["joint_calibration"]["checks"]
+        names = (
+            "jacobian_condition",
+            "max_parameter_correlation",
+            "band_cv_pct",
+            "max_band_shift_pct",
+        )
+        values = []
+        labels = []
+        for name in names:
+            item = checks[name]
+            values.append(float(item["value"]) / max(float(item["threshold"]), 1e-15))
+            labels.append(name)
+        fig, ax = plt.subplots(figsize=(8.4, 5.2), layout="constrained")
+        ax.bar(np.arange(len(values)), values, color=COLORS["primary"], alpha=0.85)
+        ax.axhline(1.0, color=COLORS["secondary"], ls="--", label="阈值归一线")
+        ax.set_xticks(np.arange(len(labels)), labels, rotation=18, ha="right")
+        ax.set(
+            title=f"{material} 自由浓度联合反演归一化指标",
+            xlabel="诊断指标",
+            ylabel="指标值 / 阈值",
+        )
+        ax.set_yscale("log")
+        ax.grid(True, axis="y")
+        _external_legend(ax)
+        _save(fig, audit_output_dir / f"{material.lower()}_joint_metrics_raw.png")
+
+
+def plot_raw_extrema_evidence(results: dict, output_dir: Path) -> None:
+    """导出 v8 色散坐标级次回归与映射间距原始图。"""
+    _style()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for material, material_result in results.items():
+        for scenario_result in material_result.scenario_results:
+            points = [
+                point
+                for point in scenario_result.points
+                if point.eligible and point.order_recovered >= 0
+            ]
+            fig, ax = plt.subplots(figsize=(8.4, 5.2), layout="constrained")
+            for sequence in sorted({point.sequence for point in points}):
+                sequence_points = sorted(
+                    [point for point in points if point.sequence == sequence],
+                    key=lambda point: point.g_cm1,
+                )
+                x = np.asarray([point.g_cm1 for point in sequence_points])
+                y = np.asarray([point.order_recovered for point in sequence_points])
+                residual = np.asarray(
+                    [point.residual_order for point in sequence_points]
+                )
+                inlier = np.asarray([point.inlier for point in sequence_points])
+                ax.scatter(x[inlier], y[inlier], s=24, label=sequence)
+                if np.any(inlier):
+                    prediction = y[inlier] + residual[inlier]
+                    order = np.argsort(x[inlier])
+                    ax.plot(
+                        x[inlier][order],
+                        prediction[order],
+                        ls="--",
+                        alpha=0.75,
+                    )
+                if np.any(~inlier):
+                    ax.scatter(
+                        x[~inlier],
+                        y[~inlier],
+                        marker="x",
+                        s=42,
+                        color="black",
+                    )
+            ax.set(
+                title=f"{material} {scenario_result.scenario} 色散坐标级次关系",
+                xlabel=r"光学相位坐标 $g$ (cm$^{-1}$)",
+                ylabel="局部干涉级次",
+            )
+            ax.grid(True)
+            _external_legend(ax)
+            _save(
+                fig,
+                output_dir
+                / f"{material.lower()}_{scenario_result.scenario}_order_fit_raw.png",
+            )
+
+        intrinsic = material_result.scenario_results[0]
+        for dataset in sorted({point.dataset for point in intrinsic.points}):
+            fig, ax = plt.subplots(figsize=(8.4, 5.2), layout="constrained")
+            for kind in ("peak", "valley"):
+                points = sorted(
+                    [
+                        point
+                        for point in intrinsic.points
+                        if point.dataset == dataset
+                        and point.kind == kind
+                        and point.eligible
+                    ],
+                    key=lambda point: point.g_cm1,
+                )
+                if len(points) < 2:
+                    continue
+                midpoint = 0.5 * (
+                    np.asarray([point.g_cm1 for point in points[1:]])
+                    + np.asarray([point.g_cm1 for point in points[:-1]])
+                )
+                spacing = np.diff([point.g_cm1 for point in points])
+                ax.plot(midpoint, spacing, "o-", label=kind)
+            ax.set(
+                title=f"{dataset} 本征色散坐标相邻同类极值间距",
+                xlabel=r"光学相位坐标 $g$ (cm$^{-1}$)",
+                ylabel=r"相邻间距 $\Delta g$ (cm$^{-1}$)",
+            )
+            ax.grid(True)
+            _external_legend(ax)
+            _save(fig, output_dir / f"{dataset}_mapped_spacing_raw.png")

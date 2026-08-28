@@ -402,3 +402,118 @@ g(\tilde\nu,\theta_0)=\tilde\nu\sqrt{n^2(\tilde\nu)-\sin^2\theta_0}.
 | V6-B | 新建独立多光束原始证据绘图模块并接入主流程 | V6-3 | 现有谐波与模型比较结果 |
 | V6-C | 新建独立色散原始证据绘图并接入主流程 | V6-4 | 现有色散、情景和轮廓结果 |
 | V6-D | 增加布局、输出清单和禁止文字回归测试，运行端到端程序 | V6-5 | Matplotlib Artist API |
+
+## v7 方案 B 本征色散与不可辨识审计算法方案
+
+### 步骤 B1：双模式复介电接口
+
+- 选定算法：材料策略模式。`intrinsic` 模式令自由载流子浓度为零，仅保留 Si 的 Edwards–Ochoa 本征色散和 4H-SiC 的固定单振子晶格色散；`fixed_carrier` 模式只接受预先给定的浓度情景；原 `carrier_coupled` 路径保持兼容。
+- 选型理由：现有物理核已经分别实现本征/晶格项与 Drude 项，模式隔离只改变参数开放方式，不重复实现介电函数，也不会改变 v6 主结果。
+- 参考资料：
+  - Edwards–Ochoa Si 红外折射率：https://doi.org/10.1364/AO.19.004130
+  - Tiwald et al. 4H/6H-SiC 晶格与 Drude 响应：https://doi.org/10.1103/PhysRevB.60.11464
+- 接口约定：`material_epsilon(material, x, carrier_cm3, mode=...) -> complex ndarray`；旧三参数调用保持原行为。
+- 依赖：NumPy（现有）。
+
+### 步骤 B2：本征色散固定情景厚度反演
+
+- 选定算法：有界一维标量优化 + 变量投影。对 `intrinsic`、`low`、`medium`、`high` 四种固定光学情景，双角度共享厚度，仅对厚度做有界搜索；每个角度的慢变基线、增益由线性最小二乘剖面消元。
+- 选型理由：浓度固定后只剩一个关键非线性变量，标量有界优化稳定、可复现；变量投影沿用现有仪器补偿方式，避免把基线参数加入非线性搜索。
+- 参考资料：
+  - Golub–Pereyra 变量投影：https://doi.org/10.1137/0710036
+  - SciPy bounded scalar minimization：https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html
+- 接口约定：`fit_intrinsic_scenarios(spectra, initial_thicknesses, material) -> IntrinsicScenarioResult`；输出四情景厚度、RMSE、包络和相对常数主值偏差。
+- 依赖：SciPy、NumPy（现有）。
+
+### 步骤 B3：不可辨识证据聚合
+
+- 选定算法：规则化证据审计。复用联合校准的 Jacobian 条件数、最大参数相关、先验触边、连续留段 CV/最大偏移，以及增强反演的轮廓区间触边、浓度相关和固定情景改善率；每项同时输出观测值、阈值和是否通过。
+- 选型理由：这些指标来自两套现有可辨识性检查，聚合后能区分“拟合成功”和“参数可辨识”，且避免重新计算造成口径漂移。
+- 参考资料：
+  - Raue et al. profile likelihood practical identifiability：https://doi.org/10.1093/bioinformatics/btp358
+- 接口约定：`build_identifiability_audit(joint_results, carrier_result) -> dict`；至少输出 `concentration_identifiable`、`failure_reasons`、`recommended_interpretation`。
+- 依赖：无新增依赖。
+
+### 步骤 B4：三轨结果汇总
+
+- 选定算法：显式决策表聚合。轨 0 主结果、轨 1 系统误差、轨 2 审计证据分别命名，不通过数值排序自动选择。
+- 选型理由：主结果采纳是架构规则而非经验最小 RMSE；显式字段能防止色散旁路覆盖 `selected_thickness_um`。
+- 接口约定：`build_refractive_index_comparison(summary, intrinsic, audit) -> dict`。
+- 输出：`intrinsic_dispersion_fit.json`、`intrinsic_n_curves.csv`、`audit_identifiability.json`、`refractive_index_comparison.json`，并扩展 `thickness_summary.csv`。
+
+### 步骤 B5：回归与系统验收
+
+- 选定算法：`unittest` 正常/边界/异常测试 + 四附件端到端回归。
+- 验证重点：
+  1. 本征模式与零载流子复介电严格一致；
+  2. 固定情景不开放浓度优化；
+  3. 四情景系统包络包含全部情景厚度；
+  4. 审计 JSON 的失败原因与现有结果一致；
+  5. v7 不覆盖轨 0 主厚度和模型选择；
+  6. 原 21 项测试全部通过。
+
+### v7 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| B1 | 扩展 `dispersion.py` 双模式接口并补边界测试 | B1 | Edwards–Ochoa；Tiwald |
+| B2 | 新建 `intrinsic_scenario.py`，实现四情景共享厚度反演与曲线导出 | B2 | bounded minimization；variable projection |
+| B3 | 新建 `identifiability_audit.py`，聚合不可辨识证据 | B3 | profile likelihood |
+| B4 | 新建 `comparison_report.py` 并接入 `main.py` 输出契约 | B4 | v7 架构采纳规则 |
+| B5 | 更新 `test_model.py`、`model.md` 与流水线记录，运行完整回归 | B5 | v7 验收标准 |
+
+## v8 色散坐标多峰谷稳健反演算法方案
+
+### 步骤 E1：透明波段与极值资格
+
+- 选定算法：连续透明区物理掩膜与现有候选窗评分联合筛选。先使用材料复折射率的消光系数、光学坐标单调性排除强吸收/折返区，再用条纹显著性、边缘距离和有效间隔数筛除低质量极值。
+- 选型理由：波段资格决定极值公式是否成立；将物理掩膜放在统计评分之前，可避免强吸收区的大残差主导厚度结果。
+- 接口：`evaluate_band_eligibility(processed, material, mode, carrier) -> BandEligibility`。
+- 依赖：NumPy、SciPy（现有）。
+
+### 步骤 E2：多峰谷观测
+
+- 选定算法：复用现有双光束检测尺度，使用 SciPy 峰显著度与半高宽评估每个峰/谷，输出统一观测对象。
+- 选型理由：保持与 L0 极值位置同源，同时补充质量权重和边缘标记，避免重新定义峰谷口径。
+- 接口：`observe_extrema(processed, two_result) -> list[ExtremumObservation]`。
+- 参考资料：SciPy peak prominence/width API。
+
+### 步骤 E3：色散坐标与级次恢复
+
+- 选定算法：按固定情景计算 \(g=\tilde\nu\sqrt{n^2-\sin^2\theta}\)；对每条峰/谷序列用相邻 \(g\) 差的稳健中位数估计漏级倍数，将局部顺序恢复为允许跳跃的级次。
+- 选型理由：同类极值在 \(g\) 坐标中应近似等距，间距倍数可识别漏峰，而无需知道绝对干涉级次。
+- 参考资料：Swanepoel 极值级次关系：https://doi.org/10.1088/0022-3735/16/12/023
+- 接口：`map_extrema_to_scenario(...) -> list[MappedExtremum]`。
+
+### 步骤 E4：共享厚度稳健回归
+
+- 选定算法：共享斜率、序列独立截距的 Huber 型稳健最小二乘；初值由线性最小二乘给出，按 MAD 标记异常极值并复算。厚度由共享斜率换算。
+- 选型理由：峰、谷和两个角度只共享厚度，不共享反射相位；Huber 损失保留轻微偏差点并降低异常点影响，适合当前几十个小样本极值。
+- 候选：
+  1. Huber 共享斜率（首选，确定性、无新增依赖）；
+  2. Theil–Sen 分序列斜率后稳健融合（回退）；
+  3. RANSAC（仅当离群比例明显升高时启用）。
+- 接口：`fit_shared_thickness(mapped, ...) -> SharedThicknessResult`。
+- 参考资料：SciPy robust least squares；Theil–Sen/Sen 稳健斜率。
+
+### 步骤 E5：稳定性与误差
+
+- 选定算法：峰/谷子集、角度子集独立拟合；连续三段留出；按极值重采样构造条件统计区间；固定情景结果形成系统包络。
+- 选型理由：分别量化定位噪声与折射率情景不确定性，避免把系统范围误称为置信区间。
+- 接口：结果对象直接包含 `peak_only_um`、`valley_only_um`、`angle_*_um`、`bootstrap_ci95`、`band_cv_pct`、`stable`。
+
+### 步骤 E6：接入与决策
+
+- 选定算法：显式状态机。只有本征情景通过峰谷、角度、留段、样本量和剔除率门控时，才将 v8 作为名义厚度；固定情景中通过门控的结果构成系统包络；否则回退 v7。
+- 输出：`extrema_observations.csv`、`dispersion_extrema_coordinates.csv`、`dispersion_extrema_fit.json`、`dispersion_extrema_residuals.csv`、`dispersion_extrema_comparison.json`。
+
+### v8 任务分配
+
+| 任务 ID | 实现内容 | 关联步骤 | 参考资料 |
+|---|---|---|---|
+| E1 | 新建 `band_eligibility.py`，实现物理资格与共同掩膜 | E1 | 现有色散模型 |
+| E2 | 新建 `extrema_observation.py`，统一峰谷观测和质量字段 | E2 | SciPy 峰属性 |
+| E3 | 新建 `dispersion_extrema.py`，完成情景映射与漏级恢复 | E3 | Swanepoel 级次关系 |
+| E4 | 新建 `shared_thickness.py`，实现共享斜率稳健反演 | E4 | robust least squares |
+| E5 | 扩展主流程、误差、决策、表图和文档 | E5、E6 | v8 架构门控 |
+| E6 | 新增不少于 10 项测试并完整运行四附件 | 全部 | v8 验收标准 |

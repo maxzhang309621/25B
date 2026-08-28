@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 
@@ -195,21 +196,38 @@ def passive_complex_sqrt(values: np.ndarray) -> np.ndarray:
     return roots
 
 
+DispersionMode = Literal["intrinsic", "fixed_carrier", "carrier_coupled"]
+
+
 def material_epsilon(
-    material: str, wavenumber_cm1: np.ndarray, carrier_cm3: float
+    material: str,
+    wavenumber_cm1: np.ndarray,
+    carrier_cm3: float = 0.0,
+    mode: DispersionMode = "carrier_coupled",
 ) -> np.ndarray:
-    """按材料分发复介电函数 ε(ν, N)。"""
+    """按材料和参数开放模式分发复介电函数。
+
+    ``intrinsic`` 强制关闭 Drude 自由载流子项；``fixed_carrier`` 与
+    ``carrier_coupled`` 使用调用方给定浓度。两者物理公式相同，但名称显式区分
+    v7 固定情景轨与遗留自由浓度反演轨。默认值保持旧接口行为。
+    """
+    if mode not in {"intrinsic", "fixed_carrier", "carrier_coupled"}:
+        raise ValueError(f"不支持的色散模式：{mode}")
+    effective_carrier = 0.0 if mode == "intrinsic" else carrier_cm3
     if material == "Si":
-        return epsilon_si(wavenumber_cm1, carrier_cm3)
+        return epsilon_si(wavenumber_cm1, effective_carrier)
     if material == "SiC":
-        return epsilon_4h_sic(wavenumber_cm1, carrier_cm3)
+        return epsilon_4h_sic(wavenumber_cm1, effective_carrier)
     raise ValueError(f"不支持的材料：{material}")
 
 
 def material_refractive_index(
-    material: str, wavenumber_cm1: np.ndarray, carrier_cm3: float
+    material: str,
+    wavenumber_cm1: np.ndarray,
+    carrier_cm3: float = 0.0,
+    mode: DispersionMode = "carrier_coupled",
 ) -> np.ndarray:
     """复折射率 n+ik = √ε，强制被动分支。"""
     return passive_complex_sqrt(
-        material_epsilon(material, wavenumber_cm1, carrier_cm3)
+        material_epsilon(material, wavenumber_cm1, carrier_cm3, mode=mode)
     )
