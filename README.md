@@ -104,7 +104,11 @@ python main.py --fast --bootstrap 10
 - `output/thickness_summary.csv`：四组数据的厚度、误差及模型判定；
 - `output/consistency.json`：双角度一致性和加权联合厚度；
 - `output/data_audit.json`：输入数据质量审计；
-- `output/fit_details.json`：拟合与诊断详细参数。
+- `output/fit_details.json`：拟合与诊断详细参数；
+- `output/dispersion_fit.json`：波长—载流子浓度联合校准、可辨识性和掺杂情景；
+- `output/refractive_index_curves.csv`：外延层与衬底的复折射率曲线；
+- `output/carrier_inference.json`：SiC 增强反射率反演、仪器模式和条件浓度区间；
+- `output/carrier_profile.csv`：外延层/衬底浓度轮廓目标函数。
 
 主要图片：
 
@@ -112,7 +116,18 @@ python main.py --fast --bootstrap 10
 - `output/thickness_comparison.png`：厚度、模型差异和置信区间；
 - `output/angle_consistency.png`：双入射角一致性；
 - `output/multibeam_evidence.png`：多光束四项判据矩阵；
-- `output/model_quality.png`：双光束与 Airy 模型质量比较。
+- `output/model_quality.png`：双光束与 Airy 模型质量比较；
+- `output/dispersion_curves.png`：SiC/Si 外延层与衬底的 \(n,k\) 曲线；
+- `output/carrier_scenarios.png`：低、中、高掺杂情景的厚度及 RMSE；
+- `output/identifiability_diagnostics.png`：连续波段稳定性与参数门控；
+- `output/carrier_profile.png`：SiC 两层载流子浓度的条件轮廓区间；
+- `output/model_flowchart.png`：当前完整数学模型流程图；
+- `docs/model-flowchart.md`：可编辑 Mermaid 流程图及核心公式。
+
+论文原始数据图（仅保留标题、坐标、单位和必要图例）：
+
+- `output/raw_evidence/multibeam/`：多光束四项指标的独立图，以及四个附件各自的频率—幅值图，共 8 张；
+- `output/raw_evidence/dispersion/`：SiC/Si 的 \(n,k\)、情景厚度、情景 RMSE、连续留段厚度和双层浓度轮廓，共 9 张。
 
 ## 使用的主要方法
 
@@ -122,16 +137,19 @@ python main.py --fast --bootstrap 10
 - Theil–Sen 稳健回归；
 - 双光束干涉相位模型；
 - Fresnel/Airy 多光束模型；
+- Si/4H-SiC 本征色散与自由载流子复介电模型；
+- 外延层—衬底物理界面反射及双角度共享厚度联合校准；
 - 差分进化与有界局部优化；
 - AICc、RMSE 和高次谐波联合诊断；
 - 峰谷间距 Bootstrap 重采样。
 
 ## 注意事项
 
-1. 当前折射率采用文献基线值，晶型、晶向、掺杂浓度和温度差异会引入系统误差。
-2. 统计置信区间不包含折射率不确定性的全部影响。
-3. Airy 模型中的有效反射率是峰形参数，不能直接视为某一真实界面的独立实验反射率。
-4. 本项目用于数学建模研究与竞赛复现，不构成工业测量标准或产品质量认证。
+1. 色散模型采用论文物性与工程先验；题目未给出晶型、晶向、掺杂类型、浓度和温度，程序会另外报告掺杂情景系统区间。
+2. 只有通过可辨识性门控时，拟合浓度才可解释为附件支持的估计；触边或强相关时只报告情景，不报告唯一浓度。
+3. 统计置信区间与折射率/掺杂系统区间含义不同，不应直接混为同一个精确度数字。
+4. 原有效 Airy 反射率仍只用于多光束证据；v3 物理模型则分别计算外延层和衬底介电函数。
+5. 本项目用于数学建模研究与竞赛复现，不构成工业测量标准或产品质量认证。
 
 ## 许可证
 

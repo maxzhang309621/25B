@@ -17,9 +17,10 @@ _src = Path(__file__).resolve().parents[1]
 if str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from config import DATA_DIR, DATASETS, OUTPUT_DIR  # noqa: E402
+from config import CANDIDATE_WINDOW_OUTPUT_DIR, DATA_DIR, DATASETS  # noqa: E402
 from data_io import load_spectrum  # noqa: E402
 
+OUTPUT_DIR = CANDIDATE_WINDOW_OUTPUT_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

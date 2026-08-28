@@ -1,4 +1,8 @@
-"""Airy 多光束模型与有界全谱拟合。"""
+"""Airy 多光束模型与有界全谱拟合。
+
+非线性参数：厚度、有效界面反射率、相位偏置；
+线性增益/漂移用最小二乘剖面消元。global_search 开启差分进化粗搜。
+"""
 
 from dataclasses import dataclass
 
@@ -12,6 +16,8 @@ from two_beam import TwoBeamResult
 
 @dataclass
 class MultiBeamResult:
+    """Airy 多光束拟合结果；effective_reflectivity 为有效界面反射率。"""
+
     thickness_um: float
     effective_reflectivity: float
     phase_offset_rad: float
@@ -28,12 +34,14 @@ def _fit_linear_part(
     reflectivity: float,
     phase_offset: float,
 ) -> tuple[np.ndarray, float, int]:
+    """固定非线性参数后，拟合线性仪器项并返回残差平方和。"""
     spec = processed.source.spec
     x = processed.wavenumber_cm1
     z = (x - x.mean()) / np.ptp(x)
     phase = round_trip_phase(x, thickness_um, spec.refractive_index, spec.angle_deg)
     airy = airy_normalized(phase + phase_offset, reflectivity)
     airy = airy - airy.mean()
+    # [常数, 线性漂移, Airy, 漂移×Airy]
     design = np.column_stack([np.ones_like(z), z, airy, z * airy])
     coefficients, *_ = np.linalg.lstsq(design, processed.residual_pct, rcond=None)
     fitted = design @ coefficients
@@ -46,6 +54,7 @@ def fit_multi_beam(
     two_beam: TwoBeamResult,
     global_search: bool = True,
 ) -> MultiBeamResult:
+    """在双光束厚度附近拟合 Airy 模型；--fast 可关闭全局搜索。"""
     initial = two_beam.thickness_refined_um
     bounds = [
         (max(0.5, 0.92 * initial), min(30.0, 1.08 * initial)),

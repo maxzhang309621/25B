@@ -1,4 +1,8 @@
-"""项目配置与数据集元信息。"""
+"""项目配置与数据集元信息。
+
+OUTPUT_DIR 指向仓库根目录 output/；Candidate window 有独立输出目录。
+refractive_index 为赛题给定常折射率，仅用于双/多光束粗估。
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,12 +11,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
+OUTPUT_DIR = ROOT / "output"
 CANDIDATE_WINDOW_DIR = SRC_DIR / "Candidate window"
-OUTPUT_DIR = CANDIDATE_WINDOW_DIR / "output"
+CANDIDATE_WINDOW_OUTPUT_DIR = CANDIDATE_WINDOW_DIR / "output"
 
 
 @dataclass(frozen=True)
 class DatasetSpec:
+    """单个附件的材料、入射角与默认拟合波段。"""
+
     key: str
     filename: str
     material: str

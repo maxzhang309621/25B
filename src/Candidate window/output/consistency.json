@@ -1,7 +1,7 @@
 {
   "SiC": {
     "angle_relative_difference_pct": 1.1631850353589508,
-    "weighted_combined_thickness_um": 7.851480969402046,
+    "weighted_combined_thickness_um": 7.832327236045142,
     "selected_models": [
       "two-beam",
       "two-beam"
@@ -9,7 +9,7 @@
   },
   "Si": {
     "angle_relative_difference_pct": 0.3794470659290821,
-    "weighted_combined_thickness_um": 3.593373506898214,
+    "weighted_combined_thickness_um": 3.5943101777662294,
     "selected_models": [
       "multi-beam",
       "multi-beam"
