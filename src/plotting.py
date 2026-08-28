@@ -1082,8 +1082,21 @@ def plot_summary_figures(
     )
     plot_model_quality(summary, output_dir)
     if dispersion_results is not None and refractive_curves is not None:
-        plot_dispersion_curves(refractive_curves, output_dir)
-        plot_carrier_scenarios(dispersion_results, output_dir)
-        plot_identifiability_diagnostics(dispersion_results, output_dir)
+        plot_dispersion_curves(
+            refractive_curves,
+            output_dir / "dispersion_curves.png",
+        )
+        plot_carrier_scenarios(
+            dispersion_results,
+            output_dir / "carrier_scenarios.png",
+        )
+        plot_identifiability_diagnostics(
+            dispersion_results,
+            output_dir / "identifiability_diagnostics.png",
+        )
     if carrier_result is not None and carrier_profile is not None:
-        plot_carrier_profiles(carrier_profile, carrier_result, output_dir)
+        plot_carrier_profiles(
+            carrier_profile,
+            carrier_result,
+            output_dir / "carrier_profiles.png",
+        )

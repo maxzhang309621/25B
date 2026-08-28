@@ -502,8 +502,9 @@ def build():
     )
     slot(doc, "6", "双入射角厚度一致性", "output/angle_consistency.png", "SiC 两点应接近联合水平线")
     slot(doc, "7", "厚度对比与不确定度", "output/thickness_comparison.png")
-    slot(doc, "8", "SiC本征色散坐标多峰谷级次回归", "output/raw_evidence/extrema/sic_intrinsic_order_fit_raw.png")
-    slot(doc, "9", "SiC双角度色散坐标相邻间距", "output/raw_evidence/extrema/sic_10_mapped_spacing_raw.png")
+    slot(doc, "8", "SiC厚度反演波段与极值资格", "output/analysis_evidence/sic_band_eligibility_analysis.png")
+    slot(doc, "9", "SiC色散坐标多峰谷共享厚度回归", "output/analysis_evidence/sic_order_fit_analysis.png")
+    slot(doc, "10", "SiC稳定性与模型采用门控", "output/analysis_evidence/sic_stability_gates_analysis.png")
 
     add(doc, "5.5 总结", kind="h2")
     add(
@@ -601,14 +602,16 @@ def build():
         doc,
         "表3表明：硅片满足四项证据门控；碳化硅虽有残差改善，但谐波比与 Rᵢ 不足，故不作多光束修正。",
     )
-    slot(doc, "10", "多光束证据矩阵", "output/multibeam_evidence.png")
-    slot(doc, "11", "模型质量对比", "output/model_quality.png")
-    slot(doc, "12", "谐波比原始图", "output/raw_evidence/multibeam/harmonic_ratio_raw.png")
-    slot(doc, "13", "有效反射率原始图", "output/raw_evidence/multibeam/effective_reflectivity_raw.png")
-    slot(doc, "14", "Si 10°谐波频谱", "output/raw_evidence/multibeam/si_10_harmonic_spectrum_raw.png")
-    slot(doc, "15", "SiC 10°谐波频谱", "output/raw_evidence/multibeam/sic_10_harmonic_spectrum_raw.png")
-    slot(doc, "16", "附件3拟合证据图", "output/si_10_fit.png")
-    slot(doc, "17", "附件4拟合证据图", "output/si_15_fit.png")
+    slot(doc, "11", "多光束证据矩阵", "output/multibeam_evidence.png")
+    slot(doc, "12", "模型质量对比", "output/model_quality.png")
+    slot(doc, "13", "谐波比原始图", "output/raw_evidence/multibeam/harmonic_ratio_raw.png")
+    slot(doc, "14", "有效反射率原始图", "output/raw_evidence/multibeam/effective_reflectivity_raw.png")
+    slot(doc, "15", "Si 10°谐波频谱", "output/raw_evidence/multibeam/si_10_harmonic_spectrum_raw.png")
+    slot(doc, "16", "SiC 10°谐波频谱", "output/raw_evidence/multibeam/sic_10_harmonic_spectrum_raw.png")
+    slot(doc, "17", "附件3拟合证据图", "output/si_10_fit.png")
+    slot(doc, "18", "附件4拟合证据图", "output/si_15_fit.png")
+    slot(doc, "19", "Si色散坐标模型稳定性与回退依据", "output/analysis_evidence/si_stability_gates_analysis.png")
+    slot(doc, "20", "最终厚度模型决策", "output/analysis_evidence/final_model_decision_analysis.png")
 
     table(
         doc,

@@ -24,6 +24,7 @@ from data_io import load_spectrum
 from diagnostics import diagnose_multibeam
 from dispersion import METADATA
 from dispersion_extrema import fit_dispersion_extrema_scenarios
+from evidence_plotting import plot_analysis_evidence
 from identifiability_audit import build_identifiability_audit
 from intrinsic_scenario import (
     fit_intrinsic_scenarios,
@@ -40,6 +41,7 @@ from raw_evidence_plotting import (
     plot_raw_multibeam_evidence,
     plot_raw_v7_evidence,
 )
+from shared_thickness import V8_THRESHOLDS
 from two_beam import estimate_two_beam
 from uncertainty import bootstrap_two_beam, relative_angle_difference
 
@@ -186,7 +188,12 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
         )
         multi_required = any(model == "multi-beam" for model in selected_models)
         adopted = bool(
-            result.stable and (not multi_required or multi_consistency <= 2.0)
+            result.stable
+            and (
+                not multi_required
+                or multi_consistency
+                <= V8_THRESHOLDS["multi_beam_consistency_pct"]
+            )
         )
         reasons = [result.fallback_reason] if result.fallback_reason else []
         if multi_required and multi_consistency > 2.0:
@@ -566,6 +573,14 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
     plot_raw_extrema_evidence(
         v8_results,
         OUTPUT_DIR / "raw_evidence" / "extrema",
+    )
+    plot_analysis_evidence(
+        summary,
+        extrema_inputs,
+        v8_results,
+        v8_comparison_payload,
+        identifiability_audit,
+        OUTPUT_DIR / "analysis_evidence",
     )
     plot_model_flowchart(OUTPUT_DIR / "model_flowchart.png")
 

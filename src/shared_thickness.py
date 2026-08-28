@@ -10,6 +10,17 @@ from scipy.optimize import least_squares
 from dispersion_extrema import MappedExtremum
 
 
+V8_THRESHOLDS = {
+    "peak_valley_diff_pct": 1.5,
+    "angle_diff_pct": 2.0,
+    "band_cv_pct": 2.0,
+    "max_band_shift_pct": 3.0,
+    "minimum_inliers": 12,
+    "maximum_rejected_fraction": 0.2,
+    "multi_beam_consistency_pct": 2.0,
+}
+
+
 @dataclass(frozen=True)
 class SharedThicknessResult:
     material: str
@@ -256,17 +267,17 @@ def fit_shared_thickness(
     rejected_fraction = float(rejected / total) if total else 1.0
 
     failures = []
-    if peak_valley_diff > 1.5:
+    if peak_valley_diff > V8_THRESHOLDS["peak_valley_diff_pct"]:
         failures.append("峰谷厚度相对差超过 1.5%")
-    if angle_diff > 2.0:
+    if angle_diff > V8_THRESHOLDS["angle_diff_pct"]:
         failures.append("双角度厚度相对差超过 2%")
-    if band_cv > 2.0:
+    if band_cv > V8_THRESHOLDS["band_cv_pct"]:
         failures.append("连续波段厚度 CV 超过 2%")
-    if max_shift > 3.0:
+    if max_shift > V8_THRESHOLDS["max_band_shift_pct"]:
         failures.append("连续波段最大偏移超过 3%")
-    if inlier_count < 12:
+    if inlier_count < V8_THRESHOLDS["minimum_inliers"]:
         failures.append("有效极值少于 12")
-    if rejected_fraction > 0.2:
+    if rejected_fraction > V8_THRESHOLDS["maximum_rejected_fraction"]:
         failures.append("极值剔除比例超过 20%")
 
     return SharedThicknessResult(

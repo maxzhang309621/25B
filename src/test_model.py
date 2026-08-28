@@ -14,6 +14,7 @@ if str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
 import importlib.util
+import inspect
 
 _band_path = _src / "Candidate window" / "band_select.py"
 _band_spec = importlib.util.spec_from_file_location("band_select", _band_path)
@@ -45,6 +46,8 @@ from dispersion_extrema import (
     map_extrema_to_scenario,
 )
 from extrema_observation import ExtremumObservation, observe_extrema
+import evidence_plotting
+from evidence_plotting import plot_analysis_evidence
 from identifiability_audit import build_identifiability_audit
 from intrinsic_scenario import (
     fit_intrinsic_scenarios,
@@ -350,6 +353,16 @@ class CarrierInferenceTests(unittest.TestCase):
 
 
 class VisualizationTests(unittest.TestCase):
+    def test_summary_dispersion_outputs_use_explicit_file_paths(self):
+        source = inspect.getsource(plot_summary_figures)
+        for filename in (
+            "dispersion_curves.png",
+            "carrier_scenarios.png",
+            "identifiability_diagnostics.png",
+            "carrier_profiles.png",
+        ):
+            self.assertIn(filename, source)
+
     def test_all_summary_figures_are_created(self):
         summary = pd.DataFrame(
             {
@@ -926,6 +939,127 @@ class V8DispersionExtremaTests(unittest.TestCase):
             paths = list(output.glob("*.png"))
             self.assertEqual(len(paths), 6)
             self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
+
+
+class V9AnalysisEvidenceTests(unittest.TestCase):
+    @staticmethod
+    def _material_inputs(material: str, thickness_um: float):
+        specs = DATASETS[:2] if material == "SiC" else DATASETS[2:]
+        x = np.linspace(1200.0, 4000.0, 1200)
+        items = []
+        for spec in specs:
+            index = material_refractive_index(material, x, mode="intrinsic")
+            optical = np.sqrt(
+                index.real**2 - np.sin(np.deg2rad(spec.angle_deg)) ** 2
+            )
+            phase = 4 * np.pi * thickness_um * 1e-4 * x * optical
+            residual = 0.8 * np.cos(phase + 0.2)
+            source = Spectrum(x, 20.0 + residual, spec, {})
+            processed = ProcessedSpectrum(
+                x,
+                20.0 + residual,
+                20.0 + residual,
+                np.full_like(x, 20.0),
+                residual,
+                float(np.median(np.diff(x))),
+                source,
+            )
+            items.append((processed, estimate_two_beam(processed)))
+        return items
+
+    @classmethod
+    def _inputs(cls):
+        extrema_inputs = {
+            "SiC": cls._material_inputs("SiC", 8.0),
+            "Si": cls._material_inputs("Si", 3.6),
+        }
+        results = {
+            material: fit_dispersion_extrema_scenarios(
+                [item[0] for item in items],
+                [item[1] for item in items],
+                material,
+                8.0 if material == "SiC" else 3.6,
+                bootstrap_repeats=20,
+            )
+            for material, items in extrema_inputs.items()
+        }
+        summary = pd.DataFrame(
+            {
+                "material": ["SiC", "SiC", "Si", "Si"],
+                "angle_deg": [10.0, 15.0, 10.0, 15.0],
+                "selected_model": [
+                    "two-beam",
+                    "two-beam",
+                    "multi-beam",
+                    "multi-beam",
+                ],
+                "selected_thickness_um": [8.0, 8.0, 3.6, 3.6],
+                "bootstrap_std_um": [0.1, 0.1, 0.05, 0.05],
+                "v8_nominal_thickness_um": [
+                    results["SiC"].nominal_thickness_um,
+                    results["SiC"].nominal_thickness_um,
+                    results["Si"].nominal_thickness_um,
+                    results["Si"].nominal_thickness_um,
+                ],
+                "v8_adopted": [True, True, False, False],
+            }
+        )
+        payload = {}
+        for material, result in results.items():
+            item = result.to_dict(False)
+            adopted = material == "SiC"
+            item["adopted"] = adopted
+            item["fallback_reason"] = "" if adopted else "与Airy结果不一致"
+            item["multi_beam_consistency_pct"] = (
+                abs(result.nominal_thickness_um - (8.0 if material == "SiC" else 3.6))
+                / (8.0 if material == "SiC" else 3.6)
+                * 100.0
+            )
+            item["final_thickness_um"] = (
+                result.nominal_thickness_um if adopted else 3.6
+            )
+            payload[material] = item
+        comparison = build_dispersion_extrema_comparison(summary, payload)
+        joint, carrier = V7IntrinsicScenarioTests._audit_objects()
+        audit = build_identifiability_audit(
+            {"SiC": joint, "Si": joint},
+            carrier,
+        )
+        return summary, extrema_inputs, results, comparison, audit
+
+    def test_analysis_evidence_creates_complete_figure_set(self):
+        summary, extrema_inputs, results, comparison, audit = self._inputs()
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = plot_analysis_evidence(
+                summary,
+                extrema_inputs,
+                results,
+                comparison,
+                audit,
+                Path(temporary),
+            )
+            self.assertEqual(len(paths), 13)
+            self.assertTrue(all(path.exists() for path in paths))
+            self.assertTrue(all(path.stat().st_size > 1000 for path in paths))
+            self.assertTrue(all(imread(path).shape[1] >= 1800 for path in paths))
+
+    def test_analysis_plotting_uses_shared_gate_constants(self):
+        source = inspect.getsource(evidence_plotting)
+        self.assertIn("V8_THRESHOLDS", source)
+        self.assertNotIn("THRESHOLDS = {", source)
+
+    def test_analysis_evidence_rejects_missing_summary_columns(self):
+        _, extrema_inputs, results, comparison, audit = self._inputs()
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaises(ValueError):
+                plot_analysis_evidence(
+                    pd.DataFrame({"material": ["SiC"]}),
+                    extrema_inputs,
+                    results,
+                    comparison,
+                    audit,
+                    Path(temporary),
+                )
 
 
 if __name__ == "__main__":

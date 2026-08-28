@@ -38,6 +38,20 @@ v8 在透明波段内把峰、谷波数映射到
 
 完整结果见 `output/dispersion_extrema_comparison.json`。
 
+## v9 分析型证据图
+
+`output/analysis_evidence/` 在纯原始数据图之外提供13张带分析标识的论文证据图：
+
+- `*_band_eligibility_analysis.png`：透明区、排除区、合格/不合格极值；
+- `*_order_fit_analysis.png`：色散坐标级次回归、厚度、统计区间与采用状态；
+- `*_order_residual_analysis.png`：稳健残差带、最大残差和剔除比例；
+- `*_stability_gates_analysis.png`：峰谷、角度、留段、偏移、Airy一致性门控；
+- `*_scenario_thickness_analysis.png`：固定折射率情景、误差棒与系统范围；
+- `*_carrier_audit_analysis.png`：载流子不可辨识的数值证据；
+- `final_model_decision_analysis.png`：SiC采用v8、Si回退Airy的最终决策链。
+
+分析标识均直接读取模型输出及统一阈值，不在绘图阶段重新计算或改变结论。
+
 ## v7 折射率三轨架构
 
 - **主结论轨**：常折射率双/多光束模型，继续给出上述最终厚度；
