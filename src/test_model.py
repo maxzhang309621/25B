@@ -146,10 +146,14 @@ class VisualizationTests(unittest.TestCase):
             output = Path(temporary)
             plot_summary_figures(summary, consistency, output)
             expected = {
-                "thickness_comparison.png",
-                "angle_consistency.png",
+                "thickness_comparison_sic.png",
+                "thickness_comparison_si.png",
+                "angle_consistency_sic.png",
+                "angle_consistency_si.png",
                 "multibeam_evidence.png",
-                "model_quality.png",
+                "multibeam_evidence_sic.png",
+                "model_quality_rmse.png",
+                "model_quality_improvement.png",
             }
             self.assertEqual({path.name for path in output.glob("*.png")}, expected)
             self.assertTrue(all((output / name).stat().st_size > 1000 for name in expected))

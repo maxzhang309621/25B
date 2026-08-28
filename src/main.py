@@ -108,7 +108,8 @@ def run_pipeline(bootstrap_repeats: int = 30, global_search: bool = True) -> pd.
             multi,
             diagnostic,
             uncertainty,
-            OUTPUT_DIR / f"{spec.key}_fit.png",
+            OUTPUT_DIR,
+            spec.key,
         )
 
     summary = pd.DataFrame(rows)
